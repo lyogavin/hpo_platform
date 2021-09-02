@@ -76,7 +76,6 @@ import time
 import numpy as np
 from scipy.stats import norm
 from scipy import stats
-# referrencing: https://knowledge-repo.d.musta.ch/post/projects/datau332_recalculating_erf_metrics.kp
 
 
 from transformers import AutoTokenizer,AutoModelForSequenceClassification,BertModel, AutoModel, AutoConfig, BertTokenizer

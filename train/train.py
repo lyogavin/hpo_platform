@@ -62,7 +62,7 @@ import os
 
 
 # In[4]:
-
+import git
 
 #!pip install transformers
 import time
@@ -470,6 +470,12 @@ def run(config, import_file_path=None):
     saving_dir = f"{path}/pretrained-{saving_ts}"
     os.makedirs(saving_dir, exist_ok=True)
     logging.info(f"created saving dir: in {saving_dir}")
+
+    # make sure no unpublished changes...
+    repo = git.Repo(search_parent_directories=True)
+    assert len(repo.index.diff(None)) == 0, f"expect 0 unstage files, but there are: {len(repo.index.diff(None))}"
+    unpublished_changes = len(list(repo.iter_commits('main@{u}..main')))
+    assert unpublished_changes == 0, f"expect no unpublished changes, but there are: {unpublished_changes}"
     
     if import_file_path is not None:
         if isinstance(import_file_path, list):
