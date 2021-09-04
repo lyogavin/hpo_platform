@@ -229,7 +229,7 @@ class Lamb(Optimizer):
 def get_optimizer_params(model, config):
     # differential learning rate and weight decay
     param_optimizer = list(model.named_parameters())
-    learning_rate = config.getfloat(configparser.DEFAULTSECT, 'LR', fallback=1e-5)
+    learning_rate = config['LR']
 
     no_decay = ['bias', 'gamma', 'beta']
     group1=['layer.0.','layer.1.','layer.2.','layer.3.']
@@ -293,8 +293,8 @@ def make_layered_optimizer(model, config):
         'roberta-large':395
     }
     
-    model_bert_path = config.get(configparser.DEFAULTSECT, 'BERT_PATH')
-    if model_bert_path not in config.get(configparser.DEFAULTSECT, 'LAYERED_OPT_ENABLED', fallback='').split(','):
+    model_bert_path = config['BERT_PATH']
+    if model_bert_path not in config['LAYERED_OPT_ENABLED'].split(','):
         model_bert_path = 'roberta-base'
         
     logging.info(f"layered opt model type to use: {model_bert_path}")
@@ -310,10 +310,10 @@ def make_layered_optimizer(model, config):
     
     
     to_append = {}
-    if config.getFloat(configparser.DEFAULTSECT, 'LAYERED_OPT_DEFAULT_WEIGHT_DECAY', fallback=None) is not None:
-        to_append['weight_decay'] = config.getFloat(configparser.DEFAULTSECT, 'LAYERED_OPT_DEFAULT_WEIGHT_DECAY', fallback=None)
-    if config.getFloat(configparser.DEFAULTSECT, 'LAYERED_OPT_DEFAULT_LR', fallback=None) is not None:
-        to_append['lr'] = config.getFloat(configparser.DEFAULTSECT, 'LAYERED_OPT_DEFAULT_LR', fallback=None)
+    if config['LAYERED_OPT_DEFAULT_WEIGHT_DECAY'] is not None:
+        to_append['weight_decay'] = config['LAYERED_OPT_DEFAULT_WEIGHT_DECAY']
+    if config['LAYERED_OPT_DEFAULT_LR'] is not None:
+        to_append['lr'] = config['LAYERED_OPT_DEFAULT_LR']
         
     parameters.append({**{"params": attention_group},**to_append})
     parameters.append({**{"params": regressor_group},**to_append})
@@ -321,7 +321,7 @@ def make_layered_optimizer(model, config):
     logging.info(f"layered opt parameters used for attention and regressor layers: {to_append}")
 
 
-    learning_rate = config.getfloat(configparser.DEFAULTSECT, 'LR', fallback=1e-5)
+    learning_rate = config['LR']
 
     for layer_num, (name, params) in enumerate(roberta_parameters):
         weight_decay = 0.0 if "bias" in name else 0.01
@@ -346,17 +346,17 @@ def make_layered_optimizer(model, config):
 
 def make_optimizer(model, config):
     optimizer_grouped_parameters = get_optimizer_params(model, config)
-    optimizer_name=config.get(configparser.DEFAULTSECT, 'OPTIMIZER_NAME', fallback='AdamW')
+    optimizer_name=config['OPTIMIZER_NAME']
     
     kwargs = {
-            'lr':config.getfloat(configparser.DEFAULTSECT, 'LR', fallback=1e-5),
-            'weight_decay': config.getfloat(configparser.DEFAULTSECT, 'WEIGHT_DECAY', fallback=0)
+            'lr':config['LR'],
+            'weight_decay': config['WEIGHT_DECAY']
     }
     
-    if config.getfloat(configparser.DEFAULTSECT, 'ADAMW_BETAS', fallback=None) is not None:
-        kwargs['betas'] = config.getfloat(configparser.DEFAULTSECT, 'ADAMW_BETAS', fallback=None)
-    if config.getfloat(configparser.DEFAULTSECT, 'ADAMW_EPS', fallback=None) is not None:
-        kwargs['eps'] = config.getfloat(configparser.DEFAULTSECT, 'ADAMW_EPS', fallback=None)
+    if config['ADAMW_BETAS'] is not None:
+        kwargs['betas'] = config['ADAMW_BETAS']
+    if config['ADAMW_EPS'] is not None:
+        kwargs['eps'] = config['ADAMW_EPS']
     
     if optimizer_name == "LAMB":
         optimizer = Lamb(optimizer_grouped_parameters, **kwargs)
@@ -374,22 +374,22 @@ def make_optimizer(model, config):
     else:
         raise Exception('Unknown optimizer: {}'.format(optimizer_name))
 
-def make_scheduler(optimizer, train_ds, config, train_loader):
-    decay_name=config.get(configparser.DEFAULTSECT, 'DECAY_NAME', fallback='linear') #'cosine_warmup',
+def make_scheduler(optimizer, train_loader, config, train_loader):
+    decay_name=config['DECAY_NAME'] #'cosine_warmup',
 
     #t_max=config['EPOCHS']
     
 
-    grad_accu_factor = config.getint(configparser.DEFAULTSECT, 'GRAD_ACCU_STEPS', fallback=1)
+    grad_accu_factor = config['GRAD_ACCU_STEPS']
 
-    t_max = int(len(train_ds) / config.getint(configparser.DEFAULTSECT, 'TRAIN_BATCH_SIZE', fallback=16) *
-                config.getint(configparser.DEFAULTSECT, 'EPOCHS', fallback=3) / grad_accu_factor)
+    t_max = int(len(train_loader)  *
+                config['EPOCHS'] / grad_accu_factor)
 
             
-    if isinstance(config.get(configparser.DEFAULTSECT,'WARMUP_STEPS_RATIO', fallback=0.0), float):
-        warmup_steps = config.get(configparser.DEFAULTSECT,'WARMUP_STEPS_RATIO', fallback=0.0) * t_max
-    elif isinstance(config.get(configparser.DEFAULTSECT,'WARMUP_STEPS_RATIO', fallback=0.0), int):
-        warmup_steps = config.get(configparser.DEFAULTSECT,'WARMUP_STEPS_RATIO', fallback=0.0)
+    if isinstance(config['WARMUP_STEPS_RATIO'], float):
+        warmup_steps = config['WARMUP_STEPS_RATIO'] * t_max
+    elif isinstance(config['WARMUP_STEPS_RATIO'], int):
+        warmup_steps = config['WARMUP_STEPS_RATIO']
     else:
         warmup_steps = 0
         
@@ -413,8 +413,8 @@ def make_scheduler(optimizer, train_ds, config, train_loader):
             'num_warmup_steps':warmup_steps,
             'num_training_steps':t_max
         }
-        if config.getint(configparser.DEFAULTSECT, 'NUM_CYCLES', fallback=None) is not None:
-            func_args['num_cycles'] = config.getint(configparser.DEFAULTSECT, 'NUM_CYCLES', fallback=None)
+        if config['NUM_CYCLES'] is not None:
+            func_args['num_cycles'] = config['NUM_CYCLES']
         scheduler = get_cosine_schedule_with_warmup(**func_args
         )
     elif decay_name == "cosine_warmup_hard_restart":
@@ -424,8 +424,8 @@ def make_scheduler(optimizer, train_ds, config, train_loader):
             'num_warmup_steps':warmup_steps,
             'num_training_steps':t_max
         }
-        if config.getint(configparser.DEFAULTSECT, 'NUM_CYCLES', fallback=None) is not None:
-            func_args['num_cycles'] = config.getint(configparser.DEFAULTSECT, 'NUM_CYCLES', fallback=None)
+        if config['NUM_CYCLES'] is not None:
+            func_args['num_cycles'] = config['NUM_CYCLES']
         scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(
             **func_args
         )
@@ -439,8 +439,8 @@ def make_scheduler(optimizer, train_ds, config, train_loader):
             optimizer,
             num_warmup_steps=warmup_steps,
             num_training_steps=t_max,
-            lr_end=config.getfloat(configparser.DEFAULTSECT, 'POLY_DECAY_LR_END', fallback=1.0) *
-                   config.getfloat(configparser.DEFAULTSECT, 'LR', fallback=1e-5)
+            lr_end=config['POLY_DECAY_LR_END'] *
+                   config['LR']
         )
     elif decay_name == "linear":
         scheduler = get_linear_schedule_with_warmup(

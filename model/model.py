@@ -90,10 +90,10 @@ from transformers import (
 import os
 
 def get_tokenizer(config):
-    if 'megatron' in config.get(configparser.DEFAULTSECT, 'TOKENIZER', fallback=None):
-        tokenizer = BertTokenizer.from_pretrained(config.get(configparser.DEFAULTSECT, 'TOKENIZER', fallback=None))
+    if 'megatron' in config['TOKENIZER']:
+        tokenizer = BertTokenizer.from_pretrained(config['TOKENIZER'])
     else:
-        tokenizer = AutoTokenizer.from_pretrained(config.get(configparser.DEFAULTSECT, 'TOKENIZER', fallback=None))
+        tokenizer = AutoTokenizer.from_pretrained(config['TOKENIZER'])
 
     return tokenizer
 
@@ -190,6 +190,90 @@ def model_save_pretrained(
 
     logging.info(f"Model weights saved in {output_model_file}")
 
+
+class SpanningQAModel(nn.Module):
+    def __init__(self, modelname_or_path, config, from_pretrain=None):
+        super(SpanningQAModel, self).__init__()
+        self.config = config
+        self.model_config = None
+        if config["MODEL_CONFIG"] is not None:
+            self.model_config = AutoConfig.from_pretrained(config["MODEL_CONFIG"])
+
+
+
+
+        if from_pretrain is not None:
+            print("load pretrain from automodel")
+
+            self.xlm_roberta = AutoModel.from_pretrained(from_pretrain, config = self.model_config)
+
+            print("load pretrain directly from file")
+            state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
+            self.load_state_dict(state_dict, strict=False)
+            del state_dict
+        else:
+            self.xlm_roberta = AutoModel.from_pretrained(config[configparser.DEFAULTSECT]['BERT_PATH'], config = self.model_config)
+
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self._init_weights(self.qa_outputs)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+
+    def forward(
+            self,
+            input_ids,
+            attention_mask=None,
+            # token_type_ids=None
+    ):
+        outputs = self.xlm_roberta(
+            input_ids,
+            attention_mask=attention_mask,
+        )
+
+        sequence_output = outputs[0]
+        pooled_output = outputs[1]
+
+        # sequence_output = self.dropout(sequence_output)
+        qa_logits = self.qa_outputs(sequence_output)
+
+        start_logits, end_logits = qa_logits.split(1, dim=-1)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        return start_logits, end_logits
+
+    def load_checkpoint(self, save_directory):
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+
+        checkpoint = torch.load(output_model_file, map_location=torch.device('cpu'))
+        self.load_state_dict(checkpoint, strict=False)
+        del checkpoint
+
+    def save_pretrained(
+                self,
+                parallel_model,
+                save_directory: Union[str, os.PathLike],
+                save_config: bool = True,
+                state_dict: Optional[dict] = None,
+                save_function: Callable = torch.save,
+                push_to_hub: bool = False,
+                **kwargs,
+        ):
+            return model_save_pretrained(self,
+                                         parallel_model,
+                                         save_directory,
+                                         save_config,
+                                         state_dict,
+                                         save_function,
+                                         push_to_hub,
+                                         **kwargs)
 class CRPModel(nn.Module):
     def __init__(self, model_config, from_pretrain=None):
         super(CRPModel, self).__init__()

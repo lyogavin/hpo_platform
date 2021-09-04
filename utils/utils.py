@@ -51,6 +51,8 @@ import os
 import time
 import logging, sys
 
+run_ts = int(time.time())
+
 logging_file_path = f"crp/training_log_{run_ts}.log"
 
 if os.path.exists("crp"):

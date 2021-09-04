@@ -222,9 +222,9 @@ def smooth_l1_loss(
     return loss
 
     
-def loss_fn(output,target, config, weight=None, loss_type=None):
+def loss_fn_rmse(output,target, config, weight=None, loss_type=None):
     if loss_type is None:
-        loss_type=config.get(configparser.DEFAULTSECT,'LOSS_TYPE', fallback=None)
+        loss_type=config['LOSS_TYPE']
         
     if loss_type == 'multi-class':
 
@@ -248,3 +248,34 @@ def loss_fn(output,target, config, weight=None, loss_type=None):
         elif loss_type == 'berhu':
             return BerHuLoss()(output,target)
 
+
+def loss_fn(preds, labels):
+    start_preds, end_preds = preds
+    start_labels, end_labels = labels
+
+    start_loss = nn.CrossEntropyLoss(ignore_index=-1)(start_preds, start_labels)
+    end_loss = nn.CrossEntropyLoss(ignore_index=-1)(end_preds, end_labels)
+    total_loss = (start_loss + end_loss) / 2
+    return total_loss
+
+def jaccard(str1, str2):
+    a = set(str1.lower().split())
+    b = set(str2.lower().split())
+    c = a.intersection(b)
+    return float(len(c)) / (len(a) + len(b) - len(c))
+
+def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
+    metrics = ['loss', 'jaccard']
+
+    res_dict = {}
+
+    for metric in metrics:
+        if metric == 'loss':
+            res = loss_fn((pred_starts, pred_ends), (target_starts, target_ends))
+        elif metric == 'jaccard':
+            res = [jaccard(context[pred_start:pred_end], context[target_start:target_end])
+                   for context, pred_start, pred_end, target_start, target_end in
+                   zip(contexts, pred_starts, pred_ends, target_starts, target_ends)]
+            res = np.array(res).mean()
+
+        res_dict[metric] = res

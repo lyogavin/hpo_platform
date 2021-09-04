@@ -67,7 +67,6 @@ import git
 #!pip install transformers
 import time
 
-run_ts = int(time.time())
 
 TRAIN_MODE = True
 TEST_MODE = False
@@ -87,7 +86,9 @@ from loss import *
 from data import *
 from optimizer import *
 from model.model import *
-
+from metric import *
+from model import model
+from exp_record_store.exp_record import ExpRecord
 logging = utils.logging
 
 
@@ -129,31 +130,6 @@ import os
 
 # In[7]:
 
-
-
-def get_train_test():
-
-    input_path = "../input/"
-
-    train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
-    test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
-    external_mlqa = pd.read_csv(f'{input_path}mlqa-hindi-processed/mlqa_hindi.csv')
-    external_xquad = pd.read_csv(f'{input_path}mlqa-hindi-processed/xquad.csv')
-    external_train = pd.concat([external_mlqa, external_xquad])
-
-
-
-
-
-
-    path = 'crp/data/' if in_private_env else '../input/commonlitreadabilityprize/'
-    train = pd.read_csv(path + 'train.csv')
-    train = train[(train.target != 0) & (train.standard_error != 0)].reset_index(drop=True)
-    test = pd.read_csv(path + 'test.csv')
-    return train, test
-
-
-
 def unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
     """
     Recursively unwraps a model from potential containers (as used in distributed training).
@@ -171,27 +147,44 @@ def unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
 
 DEBUG_PRINT = False
 
+from pathlib import Path
+import distutils
 
+def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fold):
+    original_model.save_pretrained(paralelled_model, f'{saving_dir}/model_{fold}')
+    save_training_config(config, f'{saving_dir}/model_{fold}')
+    tokenizer.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
 
-def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, scheduler, device, config, 
+    # save config another copy in tokenizer
+    original_model.roberta.config.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
+
+    # save source files...
+    path = Path(os.path.dirname(os.path.abspath(__file__)))
+    distutils.dir_util.copy_tree(path.parent.absolute(), f'{saving_dir}/src/')
+
+    logging.info(f"saved in {saving_dir}/model_{fold}")
+    print(f"saved in {saving_dir}/model_{fold}")
+
+def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, device, config,
+             exp_record,
              original_model, tokenizer,
              saving_ts, saving_dir, epoch,best_loss_sum,previous_best_loss
             ):  
     
-    EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
     best_val_rmse = previous_best_loss
-    best_epoch = 0
     best_outputs_targets = (None, None)
     step = 0
     last_eval_step = 0
-    eval_period = EVAL_SCHEDULE[0][1]    
-    training_log = config.get('runtime', 'TRAINING_LOG')
+    last_train_eval_step = 0
+    eval_period = config['EVAL_PERIOD']
+    train_eval_period = config['TRAIN_EVAL_PERIOD']
+    training_log = config['TRAINING_LOG']
     
     losses = []
-    
-    dumped_data = 0
-    
-    if config.getboolean(configparser.DEFAULTSECT, 'FREEZE_EMBED', fallback=False):
+    train_total_meter = AccumulateMeter()
+    train_steps_meter = AccumulateMeter()
+
+    if config['FREEZE_EMBED']:
         for name, param in model.named_parameters():
             # embeddings.word_embeddings.weight
             #print(name)
@@ -203,55 +196,36 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
                     
     for idx, d in enumerate(data_loader):
 
-        if len(d) == 3:
-            if DEBUG_PRINT:
-                data,targets, excerpt = d
-                weights = None
-            else:
-                data,targets,weights = d
-        else:
-            data,targets = d
-            weights = None
-            
-        data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in data.items()}
-        
-        if config.getboolean(configparser.DEFAULTSECT,'REMOVE_TOKEN_TYPES', fallback=False) and 'token_type_ids' in data:
-            del data['token_type_ids']
-        
-        targets = targets.to(device)
-        if weights is not None:
-            weights = weights.to(device)
+        targets_start, targets_end = d['start_position'].to(device), d['end_position'].to(device)
+
+
+        model_input_keys = ['input_ids', 'attention_mask']
+        data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in d.items() if key in model_input_keys}
 
         if GRAD_DESCD_STEP:
             optimizer.zero_grad()
         model.train()
+
         
-        if DEBUG_PRINT and dumped_data < 5:
-            print(f"data inputed to model: {(data['input_ids'], data['attention_mask'])}")
-            print(f"data inputed to model len: {len(data['attention_mask'])}")
-            print(excerpt)
-            dumped_data += 1
-        
-        if config.getboolean(configparser.DEFAULTSECT, 'AUTO_SCALER', fallback=False):
+        if config['AUTO_SCALER']:
             with torch.cuda.amp.autocast():
-                outputs, _ = model(**data)
+                outputs_start, outputs_end = model(**data)
         else:
-            outputs, _ = model(**data)
-        outputs = outputs.squeeze(-1)
-        #Eprint(outputs)
-        
-        loss = loss_fn(outputs, targets, config, weights)
-        loss = loss / config.getint(configparser.DEFAULTSECT, 'GRAD_ACCU_STEPS', fallback=1)
+            outputs_start, outputs_end = model(**data)
+
+
+        loss = loss_fn((outputs_start, outputs_end), (targets_start, targets_end))
+        loss = loss / config['GRAD_ACCU_STEPS']
 
         losses.append(loss.item())
         loss.backward()
         
-        if config.getint(configparser.DEFAULTSECT, 'GRAD_ACCU_STEPS', fallback=1) != 1:
+        if config['GRAD_ACCU_STEPS'] != 1:
             optimizer.step()
             scheduler.step()
             GRAD_DESCD_STEP = True
         else:
-            if idx % config.getint(configparser.DEFAULTSECT, 'GRAD_ACCU_STEPS', fallback=1) == 0 or idx == len(data_loader) - 1:
+            if idx % config['GRAD_ACCU_STEPS'] == 0 or idx == len(data_loader) - 1:
                 optimizer.step()
                 scheduler.step()
                 GRAD_DESCD_STEP = True
@@ -259,125 +233,92 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
                 GRAD_DESCD_STEP = False
         
         last_lr = scheduler.get_last_lr()
+
+        # update meters
+        train_steps_meter.update(d['context'], outputs_start, outputs_end, targets_start, targets_end)
+        train_total_meter.update(d['context'], outputs_start, outputs_end, targets_start, targets_end)
+
+        if step >= (last_train_eval_step + train_eval_period) or idx == (len(data_loader) -1):
+            # Evaluate the model on train_loader.
+            num_steps = step - last_eval_step
+            last_train_eval_step = step
+            train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics()
+            train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics()
+            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)} '
+                         f'Train Loss: {loss} Train Steps metrics(new best:{train_steps_is_best}) : {train_steps_metrics} '
+                         f'Train Total metrics(new best:{train_total_is_best}) : {train_total_metrics}')
+            train_steps_meter.reset()
+
+
         
-        
-        #nm = 1
-        #if step == nm:
-        #    torch.save(model.state_dict(), "/tmp/b"+str(nm))
-        #    torch.save(data['input_ids'], "/tmp/binput_ids"+str(nm))
-        #    torch.save(data['attention_mask'], "/tmp/battention_mask"+str(nm))
-        #    torch.save(targets, "/tmp/btarget"+str(nm))
-        #    print(f"model hash saved in /tmp/b"+str(nm))
-        
-        if step >= (last_eval_step + eval_period):
+        if step >= (last_eval_step + eval_period) or idx == (len(data_loader) -1):
             # Evaluate the model on val_loader.
             num_steps = step - last_eval_step
             last_eval_step = step
-                
-            #val_rmse = math.sqrt(eval_mse(model, val_loader))  
-            val_rmse, outputs, eval_targets, spr_cor, low, high = eval(valid_loader,model,device, config, train_x)
-            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)} Train Loss: {loss} Val Loss : {val_rmse} - ({low},{high}), Spearman Corr: {spr_cor}')
-            #losses_valid.append(loss)
 
-
-            for rmse, period in EVAL_SCHEDULE:
-                if val_rmse >= rmse:
-                    eval_period = period
-                    break                               
+            inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config)
+            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)} Train Loss: {loss} Val metrics(new best:{is_best}) : {inter_eval_metrics}')
                 
-            if not best_val_rmse or val_rmse < best_val_rmse:  
+            if is_best:
                 logging.info(f'!!new best Loss!!')
-                logging.info(f'{blu} Loss decreased from {best_val_rmse} -> {val_rmse}{blk}\n')
-                training_log['saving_ts'] = saving_ts
-                training_log['saving_dir'] = saving_dir
-                training_log[f'fold_{fold}'] = dict()
-                training_log[f'fold_{fold}']['best_epoch'] = epoch
-                training_log[f'fold_{fold}']['best_loss'] = str(val_rmse)
-                training_log[f'fold_{fold}']['total_loss'] = str((best_loss_sum+val_rmse)/(fold+1))
-                training_log[f'fold_{fold}']['spearman_corr'] = spr_cor
-                training_log['logging_file'] = logging_file_path
-                
-                SAVING_LOSS_THRESHOLD = 0.6
-                
-                if val_rmse < SAVING_LOSS_THRESHOLD:
+                new_best = inter_eval_metrics['jaccard']
+                logging.info(f'{blu} Loss decreased from {last_best} -> {new_best}{blk}\n')
 
-                    original_model.save_pretrained(model, f'{saving_dir}/model_{fold}')
-                    model_import.save_training_config(config, f'{saving_dir}/model_{fold}')
-                    tokenizer.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
+                # update record
+                exp_record.update_fold(fold, new_best, loss)
+                
+                SAVING_LOSS_THRESHOLD = config['SAVING_THRESHOLD']
+                
+                if new_best > SAVING_LOSS_THRESHOLD:
+                    save_run(original_model, model, tokenizer, config, saving_dir, fold)
 
-                    # save config another copy in tokenizer
-                    original_model.roberta.config.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
-                    logging.info(f"saved in {saving_dir}/model_{fold}")
-                    print(f"saved in {saving_dir}/model_{fold}")
                 else:
-                    logging.info(f"{val_rmse} smaller than saving threshold {SAVING_LOSS_THRESHOLD}, skip saving.")
-                    
-                best_preds = outputs
-        #             torch.save(model.state_dict(), config['MODEL_PATH'])
-                best_val_rmse = val_rmse  
-                best_outputs_targets = (outputs, eval_targets)
-                
-                
+                    logging.info(f"{new_best} weaker than saving threshold {SAVING_LOSS_THRESHOLD}, skip saving.")
+
+
+
         if GRAD_DESCD_STEP:
             step +=1
     
-    return best_val_rmse, best_outputs_targets
+    return exp_record
 
 
 # In[22]:
 
 
-def eval(data_loader, model, device, config, train_df=None):
+def eval(data_loader, model, device, config):
     model.eval()
     with torch.no_grad():
-        fin_targets = []
-        fin_outputs = []
-        fin_ids = []
-        for idx,to_upack in enumerate(data_loader):
-            data,targets = to_upack
-            data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in data.items()}
+        meter = AccumulateMeter()
+
+        for idx,d in enumerate(data_loader):
+
+            targets_start, targets_end = d['start_position'].to(device), d['end_position'].to(device)
+
+            model_input_keys = ['input_ids', 'attention_mask']
+            data = {key: val.reshape(val.shape[0], -1).to(device) for key, val in d.items() if key in model_input_keys}
+
+
             
-            if config.getboolean(configparser.DEFAULTSECT,'REMOVE_TOKEN_TYPES', fallback=False) and 'token_type_ids' in data:
-                del data['token_type_ids']
-            
-            targets = targets.to(device)
-            
-            if config.getboolean(configparser.DEFAULTSECT, 'AUTO_SCALER', fallback=False):
+            if config['AUTO_SCALER']:
                 with torch.cuda.amp.autocast():
                     outputs, _ = model(**data)
             else:
                 outputs, _ = model(**data)
             
-            outputs = outputs.squeeze(-1)
-            
-            #outputs = outputs["logits"].squeeze(-1)
+            outputs_start, outputs_end = outputs
 
-            if config.get(configparser.DEFAULTSECT,'LOSS_TYPE', fallback=None) == 'multi-class':
-                outputs = bin_values[torch.argmax(outputs, dim=-1).cpu().detach().numpy()]
-                fin_outputs.extend(outputs.tolist())
-                
-            
-#             targets = data['targets']
+            meter.update(d['context'], outputs_start, outputs_end, targets_start, targets_end)
 
-#             outputs = model(data['input_ids'], data['attention_mask'])
-            else:
-        
-                fin_outputs.extend(outputs.detach().cpu().numpy().tolist())
-            
-            fin_targets.extend(targets.detach().cpu().detach().numpy().tolist())
-
-        #loss = loss_fn(torch.tensor(fin_outputs),torch.tensor(fin_targets), config, loss_type='sqrt_mse')
-        
-        # calculate spearman corr:
-        #fin_targets.extend(train_df.target.tolist())
-        #fin_outputs.extend(train_df.target.tolist())
-        
-        sp_cor = 0 #spearmanr(fin_targets, fin_outputs)
+        #sp_cor = 0 #spearmanr(fin_targets, fin_outputs)
         
         # bootstrapping confident interval
-        rmse, low, high = bootstrap_rmse(fin_outputs, fin_targets, low_high=True)
+        #rmse, low, high = bootstrap_rmse(fin_outputs, fin_targets, low_high=True)
+
+        # get metrics for val:
+        metrics, is_best, last_best = meter.get_metrics()
         
-    return rmse,fin_outputs, fin_targets, sp_cor, low, high 
+    return metrics, is_best, last_best
 
 
 # for debug...
@@ -413,7 +354,7 @@ def infer(data_loader, model, device, config, return_embed = False, use_tqdm=Tru
             
             #outputs = outputs["logits"].squeeze(-1)
             
-            if config.get(configparser.DEFAULTSECT,'LOSS_TYPE', fallback=None) == 'multi-class':
+            if config['LOSS_TYPE'] == 'multi-class':
                 outputs = torch.argmax(outputs, dim=-1)
 
 #             targets = data['targets']
@@ -447,6 +388,8 @@ def run(config, import_file_path=None):
     #if not config['NEW_SEEDS']:
     #    seed_everything(config['SEED'])
 
+    path = config['OUTPUT_ROOT_PATH']
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
         
@@ -456,14 +399,7 @@ def run(config, import_file_path=None):
 
     tokenizer = get_tokenizer(config)
     
-    if config.getboolean(configparser.DEFAULTSECT, 'STRATEFIED', fallback=False):
-        kfold = StratifiedKFold(n_splits=config.getint(configparser.DEFAULTSECT, 'FOLDS', fallback=3),
-                                shuffle=True,
-                                random_state=config.getint(configparser.DEFAULTSECT, 'SEED', fallback=42))
-    else:
-        kfold = KFold(n_splits=config.getint(configparser.DEFAULTSECT, 'FOLDS', fallback=3),
-                      random_state=config.getint(configparser.DEFAULTSECT, 'SEED', fallback=42),
-                      shuffle=True)
+
     
     saving_ts = int(time.time())
     logging.info(f"saving_ts: {saving_ts}")
@@ -474,242 +410,103 @@ def run(config, import_file_path=None):
     # make sure no unpublished changes...
     repo = git.Repo(search_parent_directories=True)
     assert len(repo.index.diff(None)) == 0, f"expect 0 unstage files, but there are: {len(repo.index.diff(None))}"
+    uncommit_changes = len(repo.index.diff('HEAD'))
+    assert uncommit_changes == 0, f"expect 0 unstage files, but there are: {uncommit_changes}"
     unpublished_changes = len(list(repo.iter_commits('main@{u}..main')))
     assert unpublished_changes == 0, f"expect no unpublished changes, but there are: {unpublished_changes}"
-    
-    if import_file_path is not None:
-        if isinstance(import_file_path, list):
-            for l in import_file_path:
-                shutil.copy2(l,f"{saving_dir}/")
-        else:
-            shutil.copy2(import_file_path,f"{saving_dir}/")
-    
+
+
     training_log = dict()
     config.set('runtime', 'TRAINING_LOG', training_log)
+
+    git_head_id = repo.head.object.hexsha
+    training_log['git_head_id'] = git_head_id
+    logging.info(f"git head id {git_head_id}")
     
     best_loss_sum = 0.
-    
-    if config.getboolean(configparser.DEFAULTSECT, 'STRATEFIED', fallback=False):
-        split_output = kfold.split(X=train,y=bins)
-    else:
-        split_output = kfold.split(train)
+
+    data, split_output = get_data_kfold_split(config)
+
         
     all_folds_outputs_targets = ([], [])
-    
-    for fold , (train_idx,valid_idx) in enumerate(tqdm(split_output, total=config['FOLDS'])):
+
+    exp_record = ExpRecord()
+    exp_record.set_info(saving_ts, saving_dir, logging_file_path, git_head_id, config)
+
+    for fold, (train_idx,valid_idx) in enumerate(tqdm(split_output, total=len(split_output))):
+
+        train_loader, valid_loader = make_loader(config, data, split_output, tokenizer, fold)
             
-        if config.getboolean(configparser.DEFAULTSECT, 'NEW_SEEDS', fallback=False):
-            seed_everything(config.getint(configparser.DEFAULTSECT, 'SEED', fallback=42) + fold)
-        if config.getint(configparser.DEFAULTSECT, 'STOP_AT_FOLD', fallback=-1) == fold:
+        if config['RESEED_EVERY_FOLD']:
+            seed_everything(config['SEED'] + fold)
+        if config['STOP_AT_FOLD'] == fold:
             logging.info(f"stopping at {fold}...")
             break
         start_time = time.time()
-        train_x,valid_x = train.loc[train_idx],train.loc[valid_idx]
-
-        add_augment_conf = config.get(configparser.DEFAULTSECT, 'ADD_AUGMENT', fallback=None)
         
-        if add_augment_conf is not None and config.getboolean(configparser.DEFAULTSECT, 'AUGMENT_SKIP_TRAINING', fallback=False):
-            train_x = train_x.drop(train_x.index.values)
-        
-        if add_augment_conf is not None and isinstance(add_augment_conf, str):
-            train_aug = pd.read_csv(add_augment_conf)
-            # exclude ids in val:
-            print(f"before exclude ids in val len train_aug: {len(train_aug)}")
-            train_aug = train_aug[~train_aug.id.isin(valid_x.id.values)]
-            print(f"after exclude ids in val len train_aug: {len(train_aug)}")
-            train_x = train_x.append(train_aug).sample(frac=1).reset_index(drop=True)
-        elif add_augment_conf is not None and isinstance(add_augment_conf, list):
-            for aug in add_augment_conf:
-                train_aug = pd.read_csv(aug)
-                # exclude ids in val:
-                print(f"before exclude ids in val len train_aug: {len(train_aug)}")
-                train_aug = train_aug[~train_aug.id.isin(valid_x.id.values)]
-                print(f"after exclude ids in val len train_aug: {len(train_aug)}")
-                train_x = train_x.append(train_aug).sample(frac=1).reset_index(drop=True)
-
-        else:
-            train_x = train_x.reset_index(drop=True)
-            
-        if config.getboolean(configparser.DEFAULTSECT, 'AUGMENT_REWEIGHTING', fallback=False) and \
-            add_augment_conf is not None:
-            id_reweighting_df = train_x.groupby('id', as_index=False).agg(reweighting=pd.NamedAgg(column="excerpt", aggfunc="count"))
-            train_x = train_x.merge(id_reweighting_df, on='id', how='left')
-            train_x['reweighting'] = 1. / train_x['reweighting']
-            
-            assert train_x.groupby('id').agg(reweighting_sum=pd.NamedAgg(column='reweighting',aggfunc='sum'))['reweighting_sum'].apply(lambda x: np.isclose(x, 1.0)).all()
-            
-        valid_x = valid_x.reset_index(drop=True)
-
-        train_ds = CommonLitDataset(train_x, tokenizer, config, add_augment_conf)
-        
-        multi_gpu_batch_size = 1
-        
-        if config.get('runtime', 'GPU_PARALLEL_IDS', fallback=None) is not None:
-            multi_gpu_batch_size = len(config.get('runtime', 'GPU_PARALLEL_IDS', fallback=None))
-
-        if not config.getboolean(configparser.DEFAULTSECT, 'STRATEFIED_SAMPLER', fallback=False):
-            train_loader = torch.utils.data.DataLoader(
-                train_ds,
-                batch_size = config.getint(configparser.DEFAULTSECT, 'TRAIN_BATCH_SIZE', fallback=16) * multi_gpu_batch_size,
-                num_workers = 2,
-                shuffle = config.getboolean(configparser.DEFAULTSECT, 'SHUFFLE_TRAIN', fallback=True),
-                drop_last=True,
-            )
-        else:
-            #y, batch_size, shuffle=True, random_state=42
-            sampler = StratifiedBatchSampler(train_x['bins'], 
-                                             batch_size=config.getint(configparser.DEFAULTSECT, 'TRAIN_BATCH_SIZE', fallback=16) * multi_gpu_batch_size,
-                                             shuffle=config.getboolean(configparser.DEFAULTSECT, 'SHUFFLE_TRAIN', fallback=True),
-                                             random_state=config.getint(configparser.DEFAULTSECT, 'SEED', fallback=42)
-                                            )
-            train_loader = torch.utils.data.DataLoader(
-                train_ds,
-                batch_sampler = sampler,
-                num_workers = 2,
-            )
-
-        valid_ds = CommonLitDataset(valid_x, tokenizer, config)
-
-        valid_loader = torch.utils.data.DataLoader(
-            valid_ds,
-            batch_size = config.getint(configparser.DEFAULTSECT, 'VALID_BATCH_SIZE', fallback=16)  * multi_gpu_batch_size,
-            num_workers = 2,
-            drop_last=False,
-        )
-        
-        if config.getboolean(configparser.DEFAULTSECT, 'NEW_SEEDS', fallback=False):
-            seed_everything(config.getint(configparser.DEFAULTSECT, 'SEED', fallback=42) + fold)
-        
-        #device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         logging.info(f"training config: {pprint.pformat(config)}")
         logging.info(f"========== USING {device} ==========")
         logging.info(f'========== Fold: {fold} ==========')
-        num_labels=1
-        if config.get(configparser.DEFAULTSECT,'LOSS_TYPE', fallback=None) == 'multi-class':
-            num_labels = config.getint(configparser.DEFAULTSECT, 'BINS_COUNT', fallback=16)
-        #original_model = AutoModelForSequenceClassification.from_pretrained(config['BERT_PATH'],num_labels=num_labels)
+
         
-        model_class = getattr(model_import, config.get(configparser.DEFAULTSECT, 'MODEL_CLASS', fallback=None))
+        model_class = getattr(model, config['MODEL_CLASS'])
 
 
-
-        if config.get(configparser.DEFAULTSECT,'PRETRAIN_TO_LOAD', fallback=None) is not None:
-            original_model = model_class(from_pretrain=config.get(configparser.DEFAULTSECT,'PRETRAIN_TO_LOAD', fallback=None),
+        if config['PRETRAIN_TO_LOAD'] is not None:
+            original_model = model_class(from_pretrain=config['PRETRAIN_TO_LOAD'],
                                          model_config=config)
         else:
             original_model = model_class(model_config=config)
             
 
             
-        if config.getboolean(configparser.DEFAULTSECT, 'FIX_DROPOUT', fallback=True) and \
-                config.getfloat(configparser.DEFAULTSECT, 'HEAD_DROPOUT', fallback=0) is not None:
+        if config['HEAD_DROPOUT'] is not None:
             assert "(head_dropout): Dropout" in str(original_model)
-            #print(f"dropout on, dump model: {original_model}")
 
-        #torch.save(original_model.state_dict(), "/tmp/b0")
-        #print(f"model hash saved in /tmp/b0")
             
-        if config.getfloat(configparser.DEFAULTSECT, 'EMBED_OTHER_GPU', fallback=None) is None:
+        if config['EMBED_OTHER_GPU'] is None:
             original_model.to(device)
         
-        if config.get('runtime', 'GPU_PARALLEL_IDS', fallback=None) is not None:
-            print(f"using device ids: {config.get('runtime', 'GPU_PARALLEL_IDS', fallback=None)}")
-            logging.info(f"using device ids: {config.get('runtime', 'GPU_PARALLEL_IDS', fallback=None)}")
-            model =  torch.nn.DataParallel(original_model, device_ids=config.get('runtime', 'GPU_PARALLEL_IDS', fallback=None))
+        if config['GPU_PARALLEL_IDS'] is not None:
+            print(f"using device ids: {config['GPU_PARALLEL_IDS']}")
+            logging.info(f"using device ids: {config['GPU_PARALLEL_IDS']}")
+            model = torch.nn.DataParallel(original_model, device_ids=config['GPU_PARALLEL_IDS'])
         else:
             
             model = original_model
             
-        param_optimizer = list(model.named_parameters())
-        no_decay = ['bias','LayerNorm.bias','LayerNorm.weight']
-        optimizer_parameters = [
-            {'params' : [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay' : 0.001},
-            {'params' : [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay' : 0.0},
-        ]
 
-        num_train_steps = int(len(train_ds) / config.getint(configparser.DEFAULTSECT, 'TRAIN_BATCH_SIZE', fallback=16)
-                              * config.getint(configparser.DEFAULTSECT, 'EPOCHS', fallback=3))
-        
-        if config.getboolean(configparser.DEFAULTSECT, 'FIX_STEPS_BUG', fallback=True):
-            grad_accu_factor = 1
-
-            grad_accu_factor = config.getint(configparser.DEFAULTSECT, 'GRAD_ACCU_STEPS', fallback=1)
-            num_train_steps = int(len(train_loader) * config.getint(configparser.DEFAULTSECT, 'EPOCHS', fallback=3) *
-                                  config.getint(configparser.DEFAULTSECT, 'STEPS_FACTOR', fallback=1) / grad_accu_factor)
-
-            
-
-#         optimizer = AdamW(optimizer_parameters, lr = 3e-5, betas=(0.9, 0.999))
-        if config.getboolean(configparser.DEFAULTSECT, 'USE_SIMPLE_OPTIMIZER', fallback=False):
-            optimizer = AdamW(model.parameters(), lr = config.getfloat(configparser.DEFAULTSECT, 'LR', fallback=1e-5), betas=(0.9, 0.999),
-                              weight_decay=config.getfloat(configparser.DEFAULTSECT, 'ADAM_WEIGHT_DECAY', fallback=1e-5)#1e-5
-                             )
-            scheduler = get_linear_schedule_with_warmup(
-                optimizer,
-                num_warmup_steps = int(config.getfloat(configparser.DEFAULTSECT, 'WARMUP_STEPS_RATIO', fallback=0) * num_train_steps),
-                num_training_steps = num_train_steps
-            )
-#         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, steps_per_epoch=len(train_ds), max_lr=1e-4, epochs=config['EPOCHS'])
-        else:
-            optimizer = make_optimizer(original_model, config)
-            scheduler = make_scheduler(optimizer, train_ds, config, train_loader)
+        optimizer = make_optimizer(original_model, config)
+        scheduler = make_scheduler(optimizer, train_loader, config, train_loader)
             
         best_loss = 99999
         
-        losses_valid = list()
-        best_preds = list()
 
-        if config.getint(configparser.DEFAULTSECT, 'VAL_STEPS_CHUNKS', fallback=None) is not None:
-            num_steps = total_steps // config.getint(configparser.DEFAULTSECT, 'VAL_STEPS_CHUNKS', fallback=None)
-        
-        if config.getint(configparser.DEFAULTSECT, 'SCHEDULED_EVAL', fallback=None) is not None and \
-                config.getint(configparser.DEFAULTSECT, 'SCHEDULED_EVAL', fallback=None):
-            EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
-            num_steps = EVAL_SCHEDULE[0][1]
+
             
             
         torch.cuda.empty_cache()
                 
-        for epoch in range(config.getint(configparser.DEFAULTSECT, 'EPOCHS', fallback=3)):
-            current_step = 0
-            
-            chunk_id = 0
-            
-                    
-            start = time.time()
+        for epoch in range(config['EPOCHS']):
+
 
             logging.info(f'========== epoch : {epoch+1}==========')
-            best_loss, best_outputs_targets = train_fn(train_loader, valid_loader, train_x,fold,
-                                          model, 
-                                          optimizer,
-                                          scheduler,
-                                          device, 
-                                          config, 
-                                          original_model, tokenizer,
-                                          saving_ts, saving_dir, epoch, best_loss_sum, previous_best_loss=best_loss)
-                
-
-        if best_outputs_targets[0] is None or best_outputs_targets[1] is None:
-            print(f"best_outputs_targets None: {best_outputs_targets}")
-        else:
-            
-            all_folds_outputs_targets[0].extend(best_outputs_targets[0])
-            all_folds_outputs_targets[1].extend(best_outputs_targets[1])
-        
-        all_folds_loss = bootstrap_rmse(all_folds_outputs_targets[0], all_folds_outputs_targets[1], low_high=False)[0]
-        
-        print(f"all folds len: {len(all_folds_outputs_targets[0])}/ all len: {len(train)}")
+            train_fn(train_loader, valid_loader,fold,
+                model,
+                optimizer,
+                scheduler,
+                device,
+                config,
+                exp_record,
+                original_model, tokenizer,
+                saving_ts, saving_dir, epoch, best_loss_sum, previous_best_loss=best_loss)
         
         end_time = time.time()
         elp_fold = end_time - start_time
         logging.info(f'===== Fold Time: {elp_fold} =====')
-        
-        best_loss_sum += best_loss
-        
-        logging.info(f"\n saving_ts:{saving_ts}, total loss: {best_loss_sum/(fold+1)}, all folds: {all_folds_loss}")
-        print(f"\n saving_ts:{saving_ts}, total loss: {best_loss_sum/(fold+1)}, all folds: {all_folds_loss}")
-        logging.info(training_log)
-        print(training_log)
+
+        logging.info(exp_record)
+        print(exp_record)
         
         # cleanup after fold is done
         logging.info(f'cleanup after fold is done')
@@ -718,9 +515,9 @@ def run(config, import_file_path=None):
         gc.collect()
         torch.cuda.empty_cache()
         
-    print(f"run done with loss: {best_loss_sum/(fold+1)}")
-    logging.info(f"run done with loss: {best_loss_sum/(fold+1)}")
-    return saving_ts, saving_dir, best_loss_sum/(fold+1), all_folds_loss
+    print(f"run done with jaccard: {exp_record.get_mean_jaccard()}")
+    logging.info(f"run done with jaccard: {exp_record.get_mean_jaccard()}")
+    return saving_ts, saving_dir, exp_record.get_mean_jaccard(), exp_record
 
 
 
@@ -730,7 +527,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
     pretrain_base_path = f'crp/data/{upload_name}/' if 'gavin_li' in cwd else f'../input/{upload_name}/'
     
     if 'SEED' in config:
-        seed_everything(config.getint(configparser.DEFAULTSECT, 'SEED', fallback=42))
+        seed_everything(config['SEED'])
     else:
         seed_everything(43)
     
@@ -770,8 +567,8 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
     print(f'loadding tokenizer from {pretrain_paths[0]}')
 
     # fix GPT2 save pretrain issue...
-    print(f"loading tokenizer for {config.get(configparser.DEFAULTSECT, 'TOKENIZER', fallback=None)}")
-    if config.get(configparser.DEFAULTSECT, 'TOKENIZER', fallback=None) == 'microsoft/deberta-base':
+    print(f"loading tokenizer for {config['TOKENIZER']}")
+    if config['TOKENIZER'] == 'microsoft/deberta-base':
         print(f"fix GPT2 save pretrain issue by direct load from huggingface registry...")
         if os.path.exists("../input/deberta-base-uncased-tokenizer"):
             print(f"loading from ../input/deberta-base-uncased-tokenizer")
@@ -784,7 +581,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
             tokenizer = DebertaTokenizer.from_pretrained(f"{str(pretrain_paths[0])}")
     else:
         if os.path.exists(f"{str(pretrain_paths[0])}/tokenizer/"):
-            if config.get(configparser.DEFAULTSECT, 'TOKENIZER', fallback=None) in ["deepset/roberta-base-squad2","chkla/roberta-argument","roberta-base", "deepset/roberta-large-squad2"]:
+            if config['TOKENIZER'] in ["deepset/roberta-base-squad2","chkla/roberta-argument","roberta-base", "deepset/roberta-large-squad2"]:
                 tmp_ts = int(time.time())
                 os.system(f'mkdir tmp_{tmp_ts}')
                 tokenizer_dir = f"{str(pretrain_paths[0])}/tokenizer/"
@@ -803,7 +600,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
     
     sub_ds_loader = torch.utils.data.DataLoader(
             sub_ds,
-            batch_size = config.getint(configparser.DEFAULTSECT, 'VALID_BATCH_SIZE', fallback=16),
+            batch_size = config['VALID_BATCH_SIZE'],
             num_workers = 2,
             drop_last=False,
         )
@@ -815,7 +612,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
     for p in pretrain_paths:
 
         #model = AutoModelForSequenceClassification.from_pretrained(p,num_labels=1)
-        model_class = getattr(model_import, config.get(configparser.DEFAULTSECT, 'MODEL_CLASS', fallback=None))
+        model_class = getattr(model, config['MODEL_CLASS'])
         
         # hardcode upload fix:
         if "single-model-v7-1627797474/model_3" in p:

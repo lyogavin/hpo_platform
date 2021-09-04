@@ -53,7 +53,7 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 
 from filelock import FileLock
-    
+
 #from xgboost import XGBRegressor
 #import xgboost as xgb
 #from catboost import CatBoostRegressor, Pool, CatBoost
@@ -99,7 +99,7 @@ else:
         #logging.FileHandler(logging_file_path),
         logging.StreamHandler(sys.stdout)
     ]
-    
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -126,55 +126,55 @@ import_file_name = 'models_v12_embed_2gpu'
 model_import = __import__(import_file_name)
 model_import.logging = logging
 
-                
+
 import math
 
 def bootstrap_rmse(pred, target, sample_size=0.5, sample_count=100, alpha=0.9, squared=False, low_high=False):
     values = []
     se = torch.nn.MSELoss(reduction='none')(torch.tensor(pred), torch.tensor(target)).detach().cpu().numpy()
     #print(f"bootstrap_rmse input: se:{se}\n, se shape:{se.shape}\n")
-    
-    
+
+
     rmse = se.mean()
     if not squared:
         rmse = math.sqrt(rmse)
-        
+
     if not low_high:
         return (rmse, 0, 0)
-        
+
     to_sample = pd.Series(se)
-    
+
     for i in range(sample_count):
         sampled = to_sample.sample(int(sample_size * len(pred)))
         to_append = sampled.mean()
-        
+
         if not squared:
             to_append = math.sqrt(to_append)
-        
+
         values.append(to_append)
-        
+
     # confidence intervals
     p = ((1.0-alpha)/2.0) * 100
     lower = max(0.0, np.percentile(values, p))
     p = (alpha+((1.0-alpha)/2.0)) * 100
     upper = min(1.0, np.percentile(values, p))
-    
+
     return (rmse, lower,upper)
 
 # inputs are 2 lists where each record is zero or one in each sample entering the experiment:
 
 def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_list):
     # 2. Sums and means for numerator and denominator
-    
+
     assignments_control = len(control_points_or_not_list)
     assignments_treatment = len(treatment_point_or_not_list)
-    
+
     if assignments_control == 0 or assignments_treatment == 0:
         return 0., 0., 0.
 
     sum_control_numerator = control_points_or_not_list.sum()
     sum_treatment_numerator = treatment_point_or_not_list.sum()
-    
+
     sum_control_denominator = assignments_control # If ratio metric, we would sum the denominator values instead
     sum_treatment_denominator = assignments_treatment # If ratio metric, we would sum the denominator values instead
 
@@ -182,36 +182,36 @@ def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_lis
     mean_control_denominator = sum_control_denominator / assignments_control
     mean_treatment_numerator = sum_treatment_numerator / assignments_treatment
     mean_treatment_denominator = sum_treatment_denominator / assignments_treatment
-    
-    # 3. For sample second moments 
-    
+
+    # 3. For sample second moments
+
     sum_control_numerator2 = np.sum(control_points_or_not_list**2)
     sum_control_denominator2 = assignments_control # If ratio metric, we would sum the denominator^2 values instead
     sum_treatment_numerator2 = np.sum(treatment_point_or_not_list**2)
     sum_treatment_denominator2 = assignments_treatment # If ratio metric, we would sum the denominator^2 values instead
-    
+
     # 4. Variances of numerator and denominator
-    
+
     variance_control_numerator = sum_control_numerator2 / assignments_control - (sum_control_numerator / assignments_control)**2
     variance_control_denominator = sum_control_denominator2 / assignments_control - (sum_control_denominator / assignments_control)**2
     variance_treatment_numerator = sum_treatment_numerator2 / assignments_treatment - (sum_treatment_numerator / assignments_treatment)**2
     variance_treatment_denominator = sum_treatment_denominator2 / assignments_treatment - (sum_treatment_denominator / assignments_treatment)**2
-    
-    
-    
+
+
+
     # 5. Cross moments (more info)
-    
+
     cross_moment_control = mean_control_numerator * mean_control_denominator  # adjust this if getting a ratio metric to cross-sum obtained directly from query
     cross_moment_treatment = mean_treatment_numerator * mean_treatment_denominator  # see above
-    
+
     # 6. Covariance
-    
+
     co_var_control = cross_moment_control - mean_control_numerator * mean_control_denominator # 0 bc not ratio metric
     co_var_treatment = cross_moment_treatment - mean_treatment_numerator * mean_treatment_denominator # 0 bc not ratio metric
-    
-    
+
+
     # 7. Variances of ratio metrics
-    
+
     variance_treatment =         mean_treatment_denominator**-2         * (
             variance_treatment_numerator \
             + variance_treatment_denominator * (mean_treatment_numerator / mean_treatment_denominator)**2 \
@@ -224,25 +224,25 @@ def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_lis
             - (2 * co_var_control * (mean_control_numerator /  mean_control_denominator))
         )
 
-    
+
     # 8. Means
     mean_control = mean_control_numerator / mean_control_denominator
     mean_treatment = mean_treatment_numerator / mean_treatment_denominator
-    
+
     if mean_control == 0.:
         percent_change = 0.
     else:
         percent_change = (mean_treatment - mean_control) / mean_control
-    
+
     # 9. Standard error, Z-statistic, and p-value
-    
+
     stderr = ((variance_treatment/assignments_treatment) + (variance_control/assignments_control))**0.5
     zstat = (mean_treatment - mean_control) / stderr if stderr != 0 else 0
     pvalue = 2 * (1 - norm.cdf(abs(zstat)))
     ci_95 = stderr * 1.959967124 / mean_control  if mean_control != 0 else 0
-    
+
     # 10. Comparing against ground truth
-    
+
     if False:
         print("sum_control_numerator is {}".format(sum_control_numerator))
         print("sum_control_denominator is {}".format(sum_control_denominator))
@@ -254,11 +254,11 @@ def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_lis
         print("pvalue is {}".format(pvalue))
         print("stderr is {}".format(stderr))
         print("ci_95 is {}".format(ci_95))
-    
-    
-    
+
+
+
     # Power:
-    # let's work from values we would see on the ERF UI; hint, in terms of 
+    # let's work from values we would see on the ERF UI; hint, in terms of
     # scipy stats functions, you might need:
     # norm.isf - returns z critical value on right tail
     # norm.ppf - returns z critical value on  left tail
@@ -269,7 +269,7 @@ def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_lis
     base_rate       = mean_control    # 45 / 17986
     standard_error  = stderr          # calculated earlier!
     alpha           = 0.05 / 2        # two-tailed
-    
+
     power    = 0
     delta    = detectable_lift * base_rate
 
@@ -283,13 +283,13 @@ def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_lis
     #print("Power corresponding to a 73% MDE is: {:0.2f}".format(power)) # shockingly close eh...
 
     # MDE
-    
+
     MDD = 2.80158178701
 
     mde = MDD * standard_error / mean_control if mean_control != 0 else 0
     #print("")
-    #print("MDE is {:0.2f}".format(mde)) # shockingly close eh?! 
-    
+    #print("MDE is {:0.2f}".format(mde)) # shockingly close eh?!
+
     return pvalue, mde, percent_change
 
 
@@ -302,7 +302,7 @@ from transformers.file_utils import WEIGHTS_NAME
 from transformers import RobertaConfig, RobertaModel
 from torch.optim.optimizer import Optimizer
 from transformers import (
-    get_cosine_schedule_with_warmup, 
+    get_cosine_schedule_with_warmup,
     get_cosine_with_hard_restarts_schedule_with_warmup,
     get_constant_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup
@@ -407,25 +407,25 @@ class CommonLitDataset(nn.Module):
         self.weights = None
         if reweighting and 'reweighting' in data.columns:
             self.weights = data['reweighting']
-            
+
         if config['TOKENIZE_ALL']:
             self.encoded = self.tokenizer(data['excerpt'].to_list(),
                             max_length=self.config['MAX_LEN'],
                             padding=self.config['TOKENIZER_PADDING'],
                             truncation=True)
 
-            
-        if DEBUG_PRINT:   
+
+        if DEBUG_PRINT:
             print(data.head())
-        
+
     def __len__(self):
         return len(self.excerpt)
-    
+
     def __getitem__(self,item):
         excerpt = self.excerpt[item]
         if self.config['REMOVE_NEWLINE']:
             excerpt = excerpt.replace('\n', '')
-        
+
         if self.config['TOKENIZE_ALL']:
             inputs = {'input_ids':torch.tensor(self.encoded['input_ids'][item]),
                       'attention_mask':torch.tensor(self.encoded['attention_mask'][item])
@@ -437,23 +437,23 @@ class CommonLitDataset(nn.Module):
                                 truncation=True,
                                 return_tensors='pt')
         if self.targets is not None:
-            target = torch.tensor(self.targets[item], dtype=torch.float if self.loss_type != 'multi-class' else torch.long)  
+            target = torch.tensor(self.targets[item], dtype=torch.float if self.loss_type != 'multi-class' else torch.long)
             if self.weights is not None:
-                            
-                weight = torch.tensor(self.weights[item], dtype=torch.float) 
+
+                weight = torch.tensor(self.weights[item], dtype=torch.float)
 
                 return inputs,target, weight
             else:
-                                
+
                 if DEBUG_PRINT:
                     return inputs,target, excerpt
                 else:
                     return inputs,target
 
-                
+
         else:
             return inputs
-        
+
 
 
 # In[15]:
@@ -572,19 +572,19 @@ def smooth_l1_loss(
         loss = loss.sum()
     return loss
 
-    
+
 def loss_fn(output,target, config, weight=None, loss_type=None):
     if loss_type is None:
         loss_type=config['LOSS_TYPE']
-        
+
     if loss_type == 'multi-class':
 
         ce_loss = nn.CrossEntropyLoss()
 
         return ce_loss(output, target)
-        
-        
-    
+
+
+
     if weight is not None and config['LOSS_TYPE'] == 'weighted_mse':
         return weighted_mse_loss(output, target, weight)
     else:
@@ -607,7 +607,7 @@ def seed_everything(seed=43):
     random.seed(seed)
     os.environ['PYTHONASSEED'] = str(seed)
     np.random.seed(seed)
-    
+
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
@@ -744,7 +744,7 @@ def get_optimizer_params(model, config):
     learning_rate = config['LR']
     no_decay = ['bias', 'gamma', 'beta']
     group1=['layer.0.','layer.1.','layer.2.','layer.3.']
-    group2=['layer.4.','layer.5.','layer.6.','layer.7.']    
+    group2=['layer.4.','layer.5.','layer.6.','layer.7.']
     group3=['layer.8.','layer.9.','layer.10.','layer.11.']
     group_all=['layer.0.','layer.1.','layer.2.','layer.3.','layer.4.','layer.5.','layer.6.','layer.7.','layer.8.','layer.9.','layer.10.','layer.11.']
     optimizer_parameters = [
@@ -765,8 +765,8 @@ def get_optimizer_params(model, config):
 
 def make_layered_optimizer(model, config):
     #from torch.optim import AdamW
-    named_parameters = list(model.named_parameters())   
-    
+    named_parameters = list(model.named_parameters())
+
     roberta_max_layers = {
         'roberta-base':197,
         'albert-xxlarge-v2':25,
@@ -803,32 +803,32 @@ def make_layered_optimizer(model, config):
         'microsoft/deberta-large':392,
         'roberta-large':395
     }
-    
+
     model_bert_path = config['BERT_PATH']
     if model_bert_path not in config['LAYERED_OPT_ENABLED'].split(','):
         model_bert_path = 'roberta-base'
-        
+
     logging.info(f"layered opt model type to use: {model_bert_path}")
-    
-    roberta_parameters = named_parameters[:roberta_max_layers[model_bert_path]]    
+
+    roberta_parameters = named_parameters[:roberta_max_layers[model_bert_path]]
     attention_parameters = named_parameters[attention_min_layers[model_bert_path]:attention_max_layers[model_bert_path]]
     regressor_parameters = named_parameters[regressor_min_layers[model_bert_path]:]
-        
+
     attention_group = [params for (name, params) in attention_parameters]
     regressor_group = [params for (name, params) in regressor_parameters]
 
     parameters = []
-    
-    
+
+
     to_append = {}
     if config['LAYERED_OPT_DEFAULT_WEIGHT_DECAY'] is not None:
         to_append['weight_decay'] = config['LAYERED_OPT_DEFAULT_WEIGHT_DECAY']
     if config['LAYERED_OPT_DEFAULT_LR'] is not None:
         to_append['lr'] = config['LAYERED_OPT_DEFAULT_LR']
-        
+
     parameters.append({**{"params": attention_group},**to_append})
     parameters.append({**{"params": regressor_group},**to_append})
-    
+
     logging.info(f"layered opt parameters used for attention and regressor layers: {to_append}")
 
     for layer_num, (name, params) in enumerate(roberta_parameters):
@@ -836,7 +836,7 @@ def make_layered_optimizer(model, config):
 
         lr = config['LR'] #2e-5
 
-        if layer_num >= roberta_mid_layers[model_bert_path]:        
+        if layer_num >= roberta_mid_layers[model_bert_path]:
             lr = config['LR'] * 2.5 #5e-5
 
         if layer_num >= roberta_late_layers[model_bert_path]:
@@ -845,7 +845,7 @@ def make_layered_optimizer(model, config):
         parameters.append({"params": params,
                            "weight_decay": weight_decay,
                            "lr": lr})
-        
+
         to_disp = {"weight_decay": weight_decay,
                            "lr": lr}
     logging.info(f"layered opt parameters used for late roberta layers: {to_disp}")
@@ -855,17 +855,17 @@ def make_layered_optimizer(model, config):
 def make_optimizer(model, config):
     optimizer_grouped_parameters = get_optimizer_params(model, config)
     optimizer_name=config['OPTIMIZER_NAME']
-    
+
     kwargs = {
             'lr':config['LR'],
             'weight_decay': config['WEIGHT_DECAY']
     }
-    
+
     if config['ADAMW_BETAS'] is not None:
         kwargs['betas'] = config['ADAMW_BETAS']
     if config['ADAMW_EPS'] is not None:
         kwargs['eps'] = config['ADAMW_EPS']
-    
+
     if optimizer_name == "LAMB":
         optimizer = Lamb(optimizer_grouped_parameters, **kwargs)
         return optimizer
@@ -883,33 +883,33 @@ def make_optimizer(model, config):
         raise Exception('Unknown optimizer: {}'.format(optimizer_name))
 
 def make_scheduler(optimizer, train_ds, config, train_loader):
-    decay_name=config['DECAY_NAME'] #'cosine_warmup', 
+    decay_name=config['DECAY_NAME'] #'cosine_warmup',
     #t_max=config['EPOCHS']
-    
+
     grad_accu_factor = 1
-    
+
     if config['GRAD_ACCU_STEPS'] is not None:
         grad_accu_factor = config['GRAD_ACCU_STEPS']
     t_max = int(len(train_ds) / config['TRAIN_BATCH_SIZE'] * config['EPOCHS'] / grad_accu_factor)
-    
+
     if config['FIX_STEPS_BUG']:
         multi_gpu_batch_size = 1
-        
+
         if config['GPU_PARALLEL_IDS'] is not None:
             multi_gpu_batch_size = len(config['GPU_PARALLEL_IDS'])
-            
+
         t_max = int(len(train_loader) * config['EPOCHS'] * config['STEPS_FACTOR'])
-            
+
     if isinstance(config['WARMUP_STEPS_RATIO'], float):
         warmup_steps = config['WARMUP_STEPS_RATIO'] * t_max
     elif isinstance(config['WARMUP_STEPS_RATIO'], int):
         warmup_steps = config['WARMUP_STEPS_RATIO']
     else:
         warmup_steps = 0
-        
+
     print(f"using warmup steps: {warmup_steps}")
     logging.info(f"using warmup steps: {warmup_steps}")
-        
+
     if decay_name == 'step':
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer,
@@ -928,18 +928,18 @@ def make_scheduler(optimizer, train_ds, config, train_loader):
             'num_training_steps':t_max
         }
         if config['NUM_CYCLES'] is not None:
-            func_args['num_cycles'] = config['NUM_CYCLES'] 
+            func_args['num_cycles'] = config['NUM_CYCLES']
         scheduler = get_cosine_schedule_with_warmup(**func_args
         )
     elif decay_name == "cosine_warmup_hard_restart":
-        
+
         func_args = {
             'optimizer':optimizer,
             'num_warmup_steps':warmup_steps,
             'num_training_steps':t_max
         }
         if config['NUM_CYCLES'] is not None:
-            func_args['num_cycles'] = config['NUM_CYCLES'] 
+            func_args['num_cycles'] = config['NUM_CYCLES']
         scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(
             **func_args
         )
@@ -961,10 +961,10 @@ def make_scheduler(optimizer, train_ds, config, train_loader):
                 num_warmup_steps = warmup_steps,
                 num_training_steps=t_max,
             )
-    
+
     else:
-        raise Exception('Unknown lr scheduler: {}'.format(decay_name))    
-    return scheduler    
+        raise Exception('Unknown lr scheduler: {}'.format(decay_name))
+    return scheduler
 
 
 # In[20]:
@@ -976,34 +976,34 @@ import json
 import copy
 
 
-def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, scheduler, device, config, 
+def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, scheduler, device, config,
              original_model, tokenizer,
              saving_ts, saving_dir, epoch,best_loss_sum,previous_best_loss
-            ):  
-    
+            ):
+
     EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
     best_val_rmse = previous_best_loss
     best_epoch = 0
     best_outputs_targets = (None, None)
     step = 0
     last_eval_step = 0
-    eval_period = EVAL_SCHEDULE[0][1]    
+    eval_period = EVAL_SCHEDULE[0][1]
     training_log = config['TRAINING_LOG']
-    
+
     losses = []
-    
+
     dumped_data = 0
-    
+
     if config['FREEZE_EMBED']:
         for name, param in model.named_parameters():
             # embeddings.word_embeddings.weight
             #print(name)
             if 'embeddings.word_embeddings' in name:
                 param.requires_grad = False
-                
-                
+
+
     GRAD_DESCD_STEP = True
-                    
+
     for idx, d in enumerate(data_loader):
 
         if len(d) == 3:
@@ -1015,12 +1015,12 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
         else:
             data,targets = d
             weights = None
-            
+
         data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in data.items()}
-        
+
         if config['REMOVE_TOKEN_TYPES'] and 'token_type_ids' in data:
             del data['token_type_ids']
-        
+
         targets = targets.to(device)
         if weights is not None:
             weights = weights.to(device)
@@ -1028,13 +1028,13 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
         if GRAD_DESCD_STEP:
             optimizer.zero_grad()
         model.train()
-        
+
         if DEBUG_PRINT and dumped_data < 5:
             print(f"data inputed to model: {(data['input_ids'], data['attention_mask'])}")
             print(f"data inputed to model len: {len(data['attention_mask'])}")
             print(excerpt)
             dumped_data += 1
-        
+
         if config['AUTO_SCALER']:
             with torch.cuda.amp.autocast():
                 outputs, _ = model(**data)
@@ -1042,14 +1042,14 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
             outputs, _ = model(**data)
         outputs = outputs.squeeze(-1)
         #Eprint(outputs)
-        
+
         loss = loss_fn(outputs, targets, config, weights)
         if config['GRAD_ACCU_STEPS'] is not None:
             loss = loss / config['GRAD_ACCU_STEPS']
 
         losses.append(loss.item())
         loss.backward()
-        
+
         if config['GRAD_ACCU_STEPS'] is None:
             optimizer.step()
             scheduler.step()
@@ -1061,10 +1061,10 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
                 GRAD_DESCD_STEP = True
             else:
                 GRAD_DESCD_STEP = False
-        
+
         last_lr = scheduler.get_last_lr()
-        
-        
+
+
         #nm = 1
         #if step == nm:
         #    torch.save(model.state_dict(), "/tmp/b"+str(nm))
@@ -1072,13 +1072,13 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
         #    torch.save(data['attention_mask'], "/tmp/battention_mask"+str(nm))
         #    torch.save(targets, "/tmp/btarget"+str(nm))
         #    print(f"model hash saved in /tmp/b"+str(nm))
-        
+
         if step >= (last_eval_step + eval_period):
             # Evaluate the model on val_loader.
             num_steps = step - last_eval_step
             last_eval_step = step
-                
-            #val_rmse = math.sqrt(eval_mse(model, val_loader))  
+
+            #val_rmse = math.sqrt(eval_mse(model, val_loader))
             val_rmse, outputs, eval_targets, spr_cor, low, high = eval(valid_loader,model,device, config, train_x)
             logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)} Train Loss: {loss} Val Loss : {val_rmse} - ({low},{high}), Spearman Corr: {spr_cor}')
             #losses_valid.append(loss)
@@ -1087,9 +1087,9 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
             for rmse, period in EVAL_SCHEDULE:
                 if val_rmse >= rmse:
                     eval_period = period
-                    break                               
-                
-            if not best_val_rmse or val_rmse < best_val_rmse:  
+                    break
+
+            if not best_val_rmse or val_rmse < best_val_rmse:
                 logging.info(f'!!new best Loss!!')
                 logging.info(f'{blu} Loss decreased from {best_val_rmse} -> {val_rmse}{blk}\n')
                 training_log['saving_ts'] = saving_ts
@@ -1100,9 +1100,9 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
                 training_log[f'fold_{fold}']['total_loss'] = str((best_loss_sum+val_rmse)/(fold+1))
                 training_log[f'fold_{fold}']['spearman_corr'] = spr_cor
                 training_log['logging_file'] = logging_file_path
-                
+
                 SAVING_LOSS_THRESHOLD = 0.6
-                
+
                 if val_rmse < SAVING_LOSS_THRESHOLD:
 
                     original_model.save_pretrained(model, f'{saving_dir}/model_{fold}')
@@ -1115,16 +1115,16 @@ def train_fn(data_loader, valid_loader, train_x, fold, model, optimizer, schedul
                     print(f"saved in {saving_dir}/model_{fold}")
                 else:
                     logging.info(f"{val_rmse} smaller than saving threshold {SAVING_LOSS_THRESHOLD}, skip saving.")
-                    
+
                 best_preds = outputs
         #             torch.save(model.state_dict(), config['MODEL_PATH'])
-                best_val_rmse = val_rmse  
+                best_val_rmse = val_rmse
                 best_outputs_targets = (outputs, eval_targets)
-                
-                
+
+
         if GRAD_DESCD_STEP:
             step +=1
-    
+
     return best_val_rmse, best_outputs_targets
 
 
@@ -1140,48 +1140,48 @@ def eval(data_loader, model, device, config, train_df=None):
         for idx,to_upack in enumerate(data_loader):
             data,targets = to_upack
             data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in data.items()}
-            
+
             if config['REMOVE_TOKEN_TYPES'] and 'token_type_ids' in data:
                 del data['token_type_ids']
-            
+
             targets = targets.to(device)
-            
+
             if config['AUTO_SCALER']:
                 with torch.cuda.amp.autocast():
                     outputs, _ = model(**data)
             else:
                 outputs, _ = model(**data)
-            
+
             outputs = outputs.squeeze(-1)
-            
+
             #outputs = outputs["logits"].squeeze(-1)
 
             if config['LOSS_TYPE'] == 'multi-class':
                 outputs = bin_values[torch.argmax(outputs, dim=-1).cpu().detach().numpy()]
                 fin_outputs.extend(outputs.tolist())
-                
-            
+
+
 #             targets = data['targets']
 
 #             outputs = model(data['input_ids'], data['attention_mask'])
             else:
-        
+
                 fin_outputs.extend(outputs.detach().cpu().numpy().tolist())
-            
+
             fin_targets.extend(targets.detach().cpu().detach().numpy().tolist())
 
         #loss = loss_fn(torch.tensor(fin_outputs),torch.tensor(fin_targets), config, loss_type='sqrt_mse')
-        
+
         # calculate spearman corr:
         #fin_targets.extend(train_df.target.tolist())
         #fin_outputs.extend(train_df.target.tolist())
-        
+
         sp_cor = 0 #spearmanr(fin_targets, fin_outputs)
-        
+
         # bootstrapping confident interval
         rmse, low, high = bootstrap_rmse(fin_outputs, fin_targets, low_high=True)
-        
-    return rmse,fin_outputs, fin_targets, sp_cor, low, high 
+
+    return rmse,fin_outputs, fin_targets, sp_cor, low, high
 
 
 # for debug...
@@ -1201,34 +1201,34 @@ def infer(data_loader, model, device, config, return_embed = False, use_tqdm=Tru
             to_for = tqdm(to_for, total = len(data_loader))
         for idx, data in to_for:
             data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in data.items()}
-            
-            
+
+
             if not printed_debug_info:
                 print(f"input to model:{data}")
                 print(f"input to model shape:{data['attention_mask'].shape}")
-                
+
             outputs, embeds = model(**data)
             if not printed_debug_info:
                 print(f"output to model:{outputs}")
                 print(f"output to model shape:{outputs.shape}")
-                
+
                 printed_debug_info = True
             outputs = outputs.squeeze(-1)
-            
+
             #outputs = outputs["logits"].squeeze(-1)
-            
+
             if config['LOSS_TYPE'] == 'multi-class':
                 outputs = torch.argmax(outputs, dim=-1)
 
 #             targets = data['targets']
 
 #             outputs = model(data['input_ids'], data['attention_mask'])
-            
+
             fin_outputs.extend(outputs.detach().cpu().numpy().tolist())
             if return_embed:
                 fin_outputs_embed.extend(embeds.detach().cpu().numpy())
     if return_embed:
-        return fin_outputs, fin_outputs_embed 
+        return fin_outputs, fin_outputs_embed
     else:
         return fin_outputs
 
@@ -1275,48 +1275,48 @@ def run(config, import_file_path=None):
     #    seed_everything(config['SEED'])
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    
-        
+
+
     print(f"using device:{device}")
     logging.info(f"using device:{device}")
-    
+
     if 'megatron' in config['TOKENIZER']:
         tokenizer = BertTokenizer.from_pretrained(config['TOKENIZER'])
     else:
         tokenizer = AutoTokenizer.from_pretrained(config['TOKENIZER'])
-    
+
     if config['STRATEFIED']:
         kfold = StratifiedKFold(n_splits=config['FOLDS'],shuffle=True,random_state=config['SEED'])
     else:
         kfold = KFold(n_splits=config['FOLDS'], random_state=config['SEED'], shuffle=True)
-    
+
     saving_ts = int(time.time())
     logging.info(f"saving_ts: {saving_ts}")
     saving_dir = f"{path}/pretrained-{saving_ts}"
     os.makedirs(saving_dir, exist_ok=True)
     logging.info(f"created saving dir: in {saving_dir}")
-    
+
     if import_file_path is not None:
         if isinstance(import_file_path, list):
             for l in import_file_path:
                 shutil.copy2(l,f"{saving_dir}/")
         else:
             shutil.copy2(import_file_path,f"{saving_dir}/")
-    
+
     training_log = dict()
     config['TRAINING_LOG'] = training_log
-    
+
     best_loss_sum = 0.
-    
+
     if config['STRATEFIED']:
         split_output = kfold.split(X=train,y=bins)
     else:
         split_output = kfold.split(train)
-        
+
     all_folds_outputs_targets = ([], [])
-    
+
     for fold , (train_idx,valid_idx) in enumerate(tqdm(split_output, total=config['FOLDS'])):
-            
+
         if config['NEW_SEEDS']:
             seed_everything(config['SEED'] + fold)
         if config['STOP_AT_FOLD'] == fold:
@@ -1324,10 +1324,10 @@ def run(config, import_file_path=None):
             break
         start_time = time.time()
         train_x,valid_x = train.loc[train_idx],train.loc[valid_idx]
-        
+
         if config['ADD_AUGMENT'] is not None and config['AUGMENT_SKIP_TRAINING']:
             train_x = train_x.drop(train_x.index.values)
-        
+
         if config['ADD_AUGMENT'] is not None and isinstance(config['ADD_AUGMENT'], str):
             train_aug = pd.read_csv(config['ADD_AUGMENT'])
             # exclude ids in val:
@@ -1346,20 +1346,20 @@ def run(config, import_file_path=None):
 
         else:
             train_x = train_x.reset_index(drop=True)
-            
+
         if config['AUGMENT_REWEIGHTING'] and config['ADD_AUGMENT'] is not None:
             id_reweighting_df = train_x.groupby('id', as_index=False).agg(reweighting=pd.NamedAgg(column="excerpt", aggfunc="count"))
             train_x = train_x.merge(id_reweighting_df, on='id', how='left')
             train_x['reweighting'] = 1. / train_x['reweighting']
-            
+
             assert train_x.groupby('id').agg(reweighting_sum=pd.NamedAgg(column='reweighting',aggfunc='sum'))['reweighting_sum'].apply(lambda x: np.isclose(x, 1.0)).all()
-            
+
         valid_x = valid_x.reset_index(drop=True)
 
         train_ds = CommonLitDataset(train_x, tokenizer, config, config['ADD_AUGMENT'])
-        
+
         multi_gpu_batch_size = 1
-        
+
         if config['GPU_PARALLEL_IDS'] is not None:
             multi_gpu_batch_size = len(config['GPU_PARALLEL_IDS'])
 
@@ -1373,7 +1373,7 @@ def run(config, import_file_path=None):
             )
         else:
             #y, batch_size, shuffle=True, random_state=42
-            sampler = StratifiedBatchSampler(train_x['bins'], 
+            sampler = StratifiedBatchSampler(train_x['bins'],
                                              batch_size=config['TRAIN_BATCH_SIZE'] * multi_gpu_batch_size,
                                              shuffle=config['SHUFFLE_TRAIN'],
                                              random_state=config['SEED']
@@ -1392,10 +1392,10 @@ def run(config, import_file_path=None):
             num_workers = 2,
             drop_last=False,
         )
-        
+
         if config['NEW_SEEDS']:
             seed_everything(config['SEED'] + fold)
-        
+
         #device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         logging.info(f"training config: {pprint.pformat(config)}")
         logging.info(f"========== USING {device} ==========")
@@ -1404,7 +1404,7 @@ def run(config, import_file_path=None):
         if config['LOSS_TYPE'] == 'multi-class':
             num_labels = config['BINS_COUNT']
         #original_model = AutoModelForSequenceClassification.from_pretrained(config['BERT_PATH'],num_labels=num_labels)
-        
+
         model_class = getattr(model_import, config['MODEL_CLASS'])
 
 
@@ -1413,27 +1413,27 @@ def run(config, import_file_path=None):
             original_model = model_class(from_pretrain=config['PRETRAIN_TO_LOAD'], model_config=config)
         else:
             original_model = model_class(model_config=config)
-            
 
-            
+
+
         if config['FIX_DROPOUT'] and config['HEAD_DROPOUT'] is not None:
             assert "(head_dropout): Dropout" in str(original_model)
             #print(f"dropout on, dump model: {original_model}")
 
         #torch.save(original_model.state_dict(), "/tmp/b0")
         #print(f"model hash saved in /tmp/b0")
-            
+
         if config['EMBED_OTHER_GPU'] is None:
             original_model.to(device)
-        
+
         if config['GPU_PARALLEL_IDS'] is not None:
             print(f"using device ids: {config['GPU_PARALLEL_IDS']}")
             logging.info(f"using device ids: {config['GPU_PARALLEL_IDS']}")
             model =  torch.nn.DataParallel(original_model, device_ids=config['GPU_PARALLEL_IDS'])
         else:
-            
+
             model = original_model
-            
+
         param_optimizer = list(model.named_parameters())
         no_decay = ['bias','LayerNorm.bias','LayerNorm.weight']
         optimizer_parameters = [
@@ -1442,19 +1442,19 @@ def run(config, import_file_path=None):
         ]
 
         num_train_steps = int(len(train_ds) / config['TRAIN_BATCH_SIZE'] * config['EPOCHS'])
-        
-        if config['FIX_STEPS_BUG']:            
+
+        if config['FIX_STEPS_BUG']:
             grad_accu_factor = 1
 
             if config['GRAD_ACCU_STEPS'] is not None:
                 grad_accu_factor = config['GRAD_ACCU_STEPS']
             num_train_steps = int(len(train_loader) * config['EPOCHS'] * config['STEPS_FACTOR'] / grad_accu_factor)
 
-            
+
 
 #         optimizer = AdamW(optimizer_parameters, lr = 3e-5, betas=(0.9, 0.999))
         if config['USE_SIMPLE_OPTIMIZER']:
-            optimizer = AdamW(model.parameters(), lr = config['LR'], betas=(0.9, 0.999), 
+            optimizer = AdamW(model.parameters(), lr = config['LR'], betas=(0.9, 0.999),
                               weight_decay=config['ADAM_WEIGHT_DECAY']#1e-5
                              )
             scheduler = get_linear_schedule_with_warmup(
@@ -1466,70 +1466,70 @@ def run(config, import_file_path=None):
         else:
             optimizer = make_optimizer(original_model, config)
             scheduler = make_scheduler(optimizer, train_ds, config, train_loader)
-            
+
         best_loss = 99999
-        
+
         losses_valid = list()
         best_preds = list()
 
         if config['VAL_STEPS_CHUNKS'] is not None:
             num_steps = total_steps // config['VAL_STEPS_CHUNKS']
-        
+
         if config['SCHEDULED_EVAL'] is not None and config['SCHEDULED_EVAL']:
             EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
             num_steps = EVAL_SCHEDULE[0][1]
-            
-            
+
+
         torch.cuda.empty_cache()
-                
+
         for epoch in range(config['EPOCHS']):
             current_step = 0
-            
+
             chunk_id = 0
-            
-                    
+
+
             start = time.time()
 
             logging.info(f'========== epoch : {epoch+1}==========')
             best_loss, best_outputs_targets = train_fn(train_loader, valid_loader, train_x,fold,
-                                          model, 
+                                          model,
                                           optimizer,
                                           scheduler,
-                                          device, 
-                                          config, 
+                                          device,
+                                          config,
                                           original_model, tokenizer,
                                           saving_ts, saving_dir, epoch, best_loss_sum, previous_best_loss=best_loss)
-                
+
 
         if best_outputs_targets[0] is None or best_outputs_targets[1] is None:
             print(f"best_outputs_targets None: {best_outputs_targets}")
         else:
-            
+
             all_folds_outputs_targets[0].extend(best_outputs_targets[0])
             all_folds_outputs_targets[1].extend(best_outputs_targets[1])
-        
+
         all_folds_loss = bootstrap_rmse(all_folds_outputs_targets[0], all_folds_outputs_targets[1], low_high=False)[0]
-        
+
         print(f"all folds len: {len(all_folds_outputs_targets[0])}/ all len: {len(train)}")
-        
+
         end_time = time.time()
         elp_fold = end_time - start_time
         logging.info(f'===== Fold Time: {elp_fold} =====')
-        
+
         best_loss_sum += best_loss
-        
+
         logging.info(f"\n saving_ts:{saving_ts}, total loss: {best_loss_sum/(fold+1)}, all folds: {all_folds_loss}")
         print(f"\n saving_ts:{saving_ts}, total loss: {best_loss_sum/(fold+1)}, all folds: {all_folds_loss}")
         logging.info(training_log)
         print(training_log)
-        
+
         # cleanup after fold is done
         logging.info(f'cleanup after fold is done')
         del model
         del original_model
         gc.collect()
         torch.cuda.empty_cache()
-        
+
     print(f"run done with loss: {best_loss_sum/(fold+1)}")
     logging.info(f"run done with loss: {best_loss_sum/(fold+1)}")
     return saving_ts, saving_dir, best_loss_sum/(fold+1), all_folds_loss
@@ -1543,9 +1543,9 @@ def run(config, import_file_path=None):
 import copy
 def generate_config_list(configs_to_explore):
     configs_to_explore = copy.deepcopy(configs_to_explore)
-    
+
     config_list = []
-    
+
     found_explore_key = False
     for k,v in configs_to_explore.items():
         if isinstance(v, dict) and 'to_explore' in v:
@@ -1568,13 +1568,13 @@ def generate_config_list(configs_to_explore):
             found_explore_key = True
             for d in v['groups_to_explore']:
                 configs_to_explore = {**configs_to_explore, **d}
-                
+
                 to_recur = copy.deepcopy(configs_to_explore)
                 del to_recur[k]
                 ret = generate_config_list(to_recur)
                 config_list.extend(ret)
             break
-            
+
     if not found_explore_key:
         config_list.append(configs_to_explore)
     return config_list
@@ -1634,7 +1634,7 @@ base_config = {
 
 # model arch
 "MODEL_CLASS": "CRPModel",
-"USE_BERT_ALL_LAYERS": False, 
+"USE_BERT_ALL_LAYERS": False,
 "USE_BERT_LAST_4_LAYERS": False,
 #https://github.com/oleg-yaroshevskiy/quest_qa_labeling/blob/master/step5_model3_roberta_code/model.py#L76
 "USE_BERT_LAST_N_LAYERS": 4,
@@ -1666,7 +1666,7 @@ base_config = {
 'LAYERED_OPT_DEFAULT_WEIGHT_DECAY':None,
 'LAYERED_OPT_ENABLED':'albert-xxlarge-v2,roberta-base',
 
-    
+
 # data augment:
 'ADD_AUGMENT':None, #"crp/data/train_sent_sample_0.5.csv",
 'AUGMENT_SKIP_TRAINING':False,
@@ -1676,15 +1676,15 @@ base_config = {
 'STRATEFIED_SAMPLER':False,
 'POSTREPRO':False,
 'EXP_VERSION':1,
-    
+
 'REMOVE_TOKEN_TYPES':False,
 }
 
-SEED_to_explore = [3, 13, 23, 33, 42, 43, 53, 133, 168, 200, 75, 62, 90, 57, 72, 11, 54, 70, 61, 67, 
-               51, 80, 57, 84, 18, 67, 73, 18, 4, 12, 72, 85, 59, 34, 6, 20, 85, 93, 63, 74, 36, 
-               28, 71, 62, 20, 2, 75, 20, 16, 56, 65, 29, 15, 69, 9, 98, 55, 78, 6, 60, 54, 98, 
-               34, 31, 36, 24, 69, 44, 98, 80, 34, 2, 98, 55, 80, 27, 41, 39, 20, 82, 22, 32, 56, 
-               35, 44, 48, 94, 90, 36, 68, 99, 34, 75, 25, 51, 95, 75, 22, 37, 22, 88, 85, 64, 96, 
+SEED_to_explore = [3, 13, 23, 33, 42, 43, 53, 133, 168, 200, 75, 62, 90, 57, 72, 11, 54, 70, 61, 67,
+               51, 80, 57, 84, 18, 67, 73, 18, 4, 12, 72, 85, 59, 34, 6, 20, 85, 93, 63, 74, 36,
+               28, 71, 62, 20, 2, 75, 20, 16, 56, 65, 29, 15, 69, 9, 98, 55, 78, 6, 60, 54, 98,
+               34, 31, 36, 24, 69, 44, 98, 80, 34, 2, 98, 55, 80, 27, 41, 39, 20, 82, 22, 32, 56,
+               35, 44, 48, 94, 90, 36, 68, 99, 34, 75, 25, 51, 95, 75, 22, 37, 22, 88, 85, 64, 96,
                31, 72, 57, 21, 36, 96, 50, 38, 32, 40, 77, 25, 89, 70, 39, 7, 95, 10, 70, 36]
 
 
@@ -1719,8 +1719,8 @@ configs_to_explore = {
 # optimizer
 'LR':{'to_explore':[2e-5, 4e-5, 8e-5]},#4e-5,#4e-5, #
 "USE_SIMPLE_OPTIMIZER": {'to_explore':[True, False]},
-    
-'ADD_AUGMENT':{'to_explore':[None, 
+
+'ADD_AUGMENT':{'to_explore':[None,
                              "crp/data/train_sent_sample_0.5.csv", # training_log_1622794364.log
                              ["crp/data/train_sent_sample_0.5.csv", 'crp/data/train_sent_count_sample_1.csv', 'crp/data/train_sent_count_sample_3.csv'],
                              ["crp/data/splitted_url_aug_sents_9.csv", "crp/data/train_sent_sample_0.5.csv"]
@@ -1764,7 +1764,7 @@ assert 'SEED' in fields_for_hash
 fields_for_hash_no_seed = fields_for_hash.copy()
 fields_for_hash_no_seed.remove('SEED')
 assert 'SEED' not in fields_for_hash_no_seed
-    
+
 config_to_explore_list = generate_config_list(configs_to_explore)
 
 
@@ -1785,14 +1785,14 @@ shuffle(config_to_explore_list)
 def conf_explored(fields_for_hash, df,conf_dict,debug=False):
     explored = get_matched_rows(fields_for_hash, df,conf_dict, debug)
     to_ret= explored is None or len(explored) == 0
-    
+
     return not to_ret
 def get_matched_rows(fields_for_hash, df,conf_dict,debug=False):
-    
+
     assert isinstance(conf_dict, dict)
-    
+
     explored = None
-    
+
     for f in fields_for_hash:
         #print(conf_dict[f])
         not_in_dict = f not in conf_dict
@@ -1810,7 +1810,7 @@ def get_matched_rows(fields_for_hash, df,conf_dict,debug=False):
             tmp = df[f].isna()
         else:
             tmp = df[f].apply(lambda x: (isinstance(x, list) == isinstance(conf_dict[f], list)  and (x == conf_dict[f])))
-            
+
         if explored is None:
             explored = tmp
         else:
@@ -1827,38 +1827,38 @@ def get_explored_df(filter_invalid_loss=0.43):
 
     pathlist = Path("crp/explored_df").glob('**/training_result.pkl.*')
     to_ret = None
-    
+
 
     with FileLock("crp/explored_df/explored_df.lock"):
         #print("explored_df lock obtained.")
         pl = [str(path) for path in pathlist]
         #print(pl)
-        
+
         merged_to_remove = []
         for path in tqdm(pl, desc="loading explored dfs", total=len(pl)):
             #print(f"fetching {path}")
             # because path is object not string
             path_in_str = str(path)
-            
+
             if ".soft_remove" in path_in_str:
                 continue
-            
+
             current_df = pd.read_pickle(path_in_str, compression=None)
-            
+
             if to_ret is None:
                 to_ret = current_df
             else:
                 to_ret = to_ret.append(current_df)
-                
+
             if len(current_df) > 0:
                 merged_to_remove.append(path_in_str)
 
         to_ret = to_ret.drop_duplicates(subset='saving_ts')
         if filter_invalid_loss is not None:
             to_ret = to_ret[to_ret.total_loss > filter_invalid_loss]
-        
+
         if len(pl) > 1:
-        
+
             save_file = store_explored_df_no_lock(to_ret)
 
             assert to_ret['saving_ts'].nunique() == pd.read_pickle(save_file, compression=None).shape[0]
@@ -1873,7 +1873,7 @@ def store_explored_df(df):
     with FileLock("crp/explored_df/explored_df.lock"):
         print("explored_df lock obtained.")
         return store_explored_df_no_lock(df)
-    
+
 def store_explored_df_no_lock(df):
     save_file = f'crp/explored_df/training_result.pkl.{int(time.time())}.{random.randint(0,65535)}'
     df = df.drop_duplicates(subset='saving_ts')
@@ -1881,7 +1881,7 @@ def store_explored_df_no_lock(df):
     logging.info(f"{save_file} updated.")
     print(f"{save_file} updated.")
     return save_file
-    
+
 def add_col_explored_df(col, value):
 
     pathlist = Path("crp/explored_df").glob('**/training_result.pkl.*')
@@ -1929,11 +1929,11 @@ def modify_col_filter_explored_df(col, val, target_col, target_val, assert_one=T
             if col in df.columns:
                 if assert_one:
                     assert len(df.loc[df[col] == val]) == 1
-                df.loc[df[col] == val, target_col] = target_val 
+                df.loc[df[col] == val, target_col] = target_val
                 df.to_pickle(path_in_str)
 
-def compare_2_confs(conf0, conf1, 
-                    base_config=base_config, 
+def compare_2_confs(conf0, conf1,
+                    base_config=base_config,
                     fields_for_hash=fields_for_hash,
                     training_result_file_name = None, #'crp/training_result.csv',
                     seeds=SEED_to_explore,
@@ -1941,57 +1941,57 @@ def compare_2_confs(conf0, conf1,
                     max_rounds=10,
                     min_len=3,
                     import_file_path=None):
-    
+
     print(f"comparing: {conf0} V.S. {conf1}")
     logging.warning(f"comparing: {conf0} V.S. {conf1}")
     ori_conf0 = conf0
     ori_conf1 = conf1
     conf0 = {**base_config, **conf0}
     conf1 = {**base_config, **conf1}
-    
+
     assert conf0 != conf1
-    
+
     rounds = 0
-    
+
     pval  =1.
-    
+
     explored_df = None
-    
+
     #max_rounds = 10
 
     min_conf_len = 0
-    
+
     if not (min_conf_len < min_len or (pval >= pval_bar and min_conf_len < max_rounds)):
         return "already_concluded"
-    
+
     while min_conf_len < min_len or (pval >= pval_bar and min_conf_len < max_rounds):
         print(f"\n [round:{rounds}]")
         logging.warning(f"\n [round:{rounds}]")
-            
+
         if explored_df is None:
             explored_df = get_explored_df() #pd.read_csv('crp/training_result.csv')
-            
+
         fields_for_hash_no_seed = fields_for_hash.copy()
         fields_for_hash_no_seed.remove('SEED')
-        
+
         assert 'SEED' not in fields_for_hash_no_seed
 
         matched_conf0 = get_matched_rows(fields_for_hash_no_seed, explored_df, conf0, debug=False)
         matched_conf1 = get_matched_rows(fields_for_hash_no_seed, explored_df, conf1)
-        
+
         #print(f"matching: {matched_conf0}, {matched_conf1}")
         print(f"matched_conf0 len:{len(matched_conf0)}, matched_conf1 len:{len(matched_conf1)}")
         logging.warning(f"matched_conf0 len:{len(matched_conf0)}, matched_conf1 len:{len(matched_conf1)}")
-        
+
         if rounds > 0:
             assert len(matched_conf0) > 0 and len(matched_conf1)>0
-            
+
         min_conf_len = min(len(matched_conf0),len(matched_conf1))
 
         if len(matched_conf0) > 0 and len(matched_conf1)>0:
 
             pval, _, pc = calculate_p_value_mde(matched_conf0.total_loss, matched_conf1.total_loss)
-            
+
             #print(f"{ori_conf0} - {matched_conf0.total_loss} ")
             #print(f"{ori_conf1} - {matched_conf1.total_loss} ")
 
@@ -2001,41 +2001,41 @@ def compare_2_confs(conf0, conf1,
             logging.warning(f"{ori_conf0} - mean: {matched_conf0.total_loss.mean()} std: {matched_conf0.total_loss.std()}")
             logging.warning(f"{ori_conf1} - mean: {matched_conf1.total_loss.mean()} std: {matched_conf1.total_loss.std()}")
             logging.warning(f"pval: {pval}, pc: {pc}\n")
-            
+
             if min_conf_len >= min_len and (pval < pval_bar or min_conf_len >= max_rounds):
                 print(f"done")
                 return "already_concluded"
                 break
-            
+
         next_seed_idx0 = 0
         next_seed_idx1 = 0
-            
+
         while seeds[next_seed_idx0] in matched_conf0['SEED'].values:
             next_seed_idx0+=1
         while seeds[next_seed_idx1] in matched_conf1['SEED'].values:
             next_seed_idx1+=1
-            
+
         print(f"found seed {seeds[next_seed_idx0]} besides {matched_conf0['SEED'].values}")
-                
+
         print(f"1 more round of testing at seeds: {seeds[next_seed_idx0]} and {seeds[next_seed_idx1]}")
-            
+
         logging.warning(f"found seed {seeds[next_seed_idx0]} besides {matched_conf0['SEED'].values}")
-                
+
         logging.warning(f"1 more round of testing at seeds: {seeds[next_seed_idx0]} and {seeds[next_seed_idx1]}")
-        
+
         if len(matched_conf0) <= len(matched_conf1):
             explored_df = run_with_record(conf0, seeds[next_seed_idx0], explored_df,
                         fields_for_hash=fields_for_hash, import_file_path=import_file_path)
-            
+
         if len(matched_conf0) >= len(matched_conf1):
             explored_df = run_with_record(conf1, seeds[next_seed_idx1], explored_df,
                         fields_for_hash=fields_for_hash, import_file_path=import_file_path)
-        
+
         rounds +=1
 
-         
+
     print(f"concluded: {conf0} V.S. {conf1}")
-    logging.warning(f"concluded: {conf0} V.S. {conf1}")   
+    logging.warning(f"concluded: {conf0} V.S. {conf1}")
 
 
 # In[96]:
@@ -2048,12 +2048,12 @@ def run_with_record(conf, seed, input_df=None,fields_for_hash=fields_for_hash, i
         tmpdf = get_explored_df() #pd.read_csv(training_result_file_name)
     else:
         tmpdf = input_df
-        
+
     assert 'SEED' in fields_for_hash
     if conf_explored(fields_for_hash, tmpdf, {**conf, **{'SEED':seed}}):
         print(f"already explored: seed:{seed}, and conf: {conf}")
         return tmpdf
-    
+
     conf['SEED']=seed
     row = copy.deepcopy(conf)
     saving_ts, saving_dir, total_loss, all_folds_loss = run(conf, import_file_path=import_file_path)
@@ -2063,14 +2063,14 @@ def run_with_record(conf, seed, input_df=None,fields_for_hash=fields_for_hash, i
     row['all_folds_loss']=all_folds_loss
     row['ts']=int(time.time())
     row['config_id'] = 0
-        
-        
+
+
     # open again to avoid overwriting
     if input_df is None:
         tmpdf = get_explored_df() #pd.read_csv(training_result_file_name)
     else:
         tmpdf = input_df
-        
+
     existing_tss = tmpdf.saving_ts.values
     print(f"existing id count: {len(existing_tss)}")
     # make sure the same columns:
@@ -2081,35 +2081,35 @@ def run_with_record(conf, seed, input_df=None,fields_for_hash=fields_for_hash, i
     print(f"new row count: {len(new_rows)}")
     #print(tmpdf)
     #print('saving...')
-    
+
     store_explored_df(new_rows)
-    
+
     return tmpdf
-    
-def run_with_record_assign_seed(conf, input_df=None,fields_for_hash=fields_for_hash, import_file_path=None, seeds=SEED_to_explore):    
+
+def run_with_record_assign_seed(conf, input_df=None,fields_for_hash=fields_for_hash, import_file_path=None, seeds=SEED_to_explore):
     explored_df = get_explored_df() #pd.read_csv('crp/training_result.csv')
-            
+
     fields_for_hash_no_seed = fields_for_hash.copy()
     fields_for_hash_no_seed.remove('SEED')
-        
+
     assert 'SEED' not in fields_for_hash_no_seed
 
     matched_conf0 = get_matched_rows(fields_for_hash_no_seed, explored_df, conf, debug=False)
-        
+
     next_seed_idx0 = 0
-            
+
     while seeds[next_seed_idx0] in matched_conf0['SEED'].values:
             next_seed_idx0+=1
 
-            
+
     print(f"found seed {seeds[next_seed_idx0]} besides {matched_conf0['SEED'].values}")
-        
+
     return run_with_record(conf, seeds[next_seed_idx0], input_df,fields_for_hash, import_file_path)
 
 # In[27]:
 
 def multi_run_with_record_assign_seed(conf, count=10, import_file_path=None):
-    
+
     for i in range(count):
         print(f"exploring conf: {i}/{count}...\n\n")
         logging.info(f"exploring conf: {i}/{count}...\n\n")
@@ -2121,23 +2121,23 @@ def multi_run_with_record_assign_seed(conf, count=10, import_file_path=None):
 
 
 #if TRAIN_MODE:
-    
-    
+
+
 def randome_explore(seeds_count=10):
     #training_result_file_name = 'crp/training_result.csv'
     #training_result_file_name_rename = 'crp/training_result.csv.old'
-    
+
     explored_df = None
-    
+
     if os.path.exists(training_result_file_name):
-    
+
         explored_df = get_explored_df() #pd.read_csv('crp/training_result.csv')
 
-        
+
         #get_ipython().system('mv {training_result_file_name} {training_result_file_name_rename}')
-                
-    
-        
+
+
+
     for ix, conf in enumerate(config_to_explore_list):
 
         for seed in SEED_to_explore[:seeds_count]:
@@ -2165,7 +2165,7 @@ def randome_explore(seeds_count=10):
 
 
 import json
-    
+
 def gen_scripts(SAVING_TS = 1622161186, TS_IN_TITLE=False):
     if SAVING_TS is not None:
         row = get_explored_df() #pd.read_csv('crp/training_result.csv')
@@ -2208,27 +2208,27 @@ def gen_scripts(SAVING_TS = 1622161186, TS_IN_TITLE=False):
 
 
 
-    
+
 def pred_df(df, config, upload_name='pretrained-model-1621892031'):
     pretrain_base_path = f'crp/data/{upload_name}/' if 'gavin_li' in cwd else f'../input/{upload_name}/'
-    
+
     if 'SEED' in config:
         seed_everything(config['SEED'])
     else:
         seed_everything(43)
-    
+
     #print(pretrain_base_path)
 
     import json
-    
+
     # assert the save version...
-    
+
     #with open(f"{pretrain_base_path}/model_0/training_config.json", 'r') as f:
     #    conf = json.load(f)
     #    if 'saving_ts' in conf:
     #        assert conf['saving_ts'] == 1622060846, 'saving_ts should match with the saved one'
-        
-        
+
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
@@ -2282,16 +2282,16 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
             print(f"loading from {pretrain_paths[0]}")
             tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}")
 
-    sub_ds = CommonLitDataset(df, tokenizer, config)    
-    
+    sub_ds = CommonLitDataset(df, tokenizer, config)
+
     sub_ds_loader = torch.utils.data.DataLoader(
             sub_ds,
             batch_size = config['VALID_BATCH_SIZE'],
             num_workers = 2,
             drop_last=False,
         )
-    
-    
+
+
     scores = []
     embeds = []
 
@@ -2299,7 +2299,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
 
         #model = AutoModelForSequenceClassification.from_pretrained(p,num_labels=1)
         model_class = getattr(model_import, config['MODEL_CLASS'])
-        
+
         # hardcode upload fix:
         if "single-model-v7-1627797474/model_3" in p:
             model_config = json.load(open(f'../input/single-model-v7-1627797474/model_2/training_config.json'))
@@ -2308,17 +2308,17 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
             subprocess.getoutput("cp ../input/single-model-v7-1627797474/model_2/*.json /tmp/model_3/")
             subprocess.getoutput("cp -r ../input/single-model-v7-1627797474/model_2/tokenizer /tmp/model_3/")
         else:
-            
+
             model_config = json.load(open(f'{p}/training_config.json'))
-            
+
         model_config = {**base_config, **model_config}
-        
+
         print(f"loading model class:{config['MODEL_CLASS']}\n pretrain: {str(p)}, config:{model_config}")
-      
+
         if model_config['EMBED_OTHER_GPU'] is not None:
             model_config['EMBED_OTHER_GPU'] = 0
 
-            
+
         if "single-model-v7-1627797474/model_3" in p:
             model = model_class(from_pretrain='/tmp/model_3', model_config=model_config)
             model.load_checkpoint('/tmp/model_3')
@@ -2326,15 +2326,15 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
             model = model_class(from_pretrain=p, model_config=model_config)
             model.load_checkpoint(p)
         model.to(device)
-        
+
         #print('loading checkpoint...')
-    
+
         #checkpoint = torch.load(os.path.join(p, WEIGHTS_NAME), map_location=torch.device('cpu'))
         #model.load_state_dict(checkpoint,strict=False)
 
         #print(f'{os.path.join(p, WEIGHTS_NAME)} loaded.')
 
-        
+
         #print(f"input to infer:{df}")
         outputs, output_embeds = infer(sub_ds_loader,model,device, model_config, return_embed=True)
         #print(f"output to infer:{output_embeds}")
@@ -2345,14 +2345,14 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
         pred_sum += outputs
         scores.append(outputs)
         embeds.append(output_embeds)
-        
-        
+
+
         # cleanup after fold is done
         print(f'cleanup after model is done')
         del model
         gc.collect()
         torch.cuda.empty_cache()
-        
+
 
     pred_sum = pred_sum/(len(pretrain_paths))
     return pred_sum, scores, embeds
@@ -2368,7 +2368,7 @@ def create_submission(_,predictions, calibrate_rms=None):
     if calibrate_rms is not None:
         x = mean_squared_error(predictions, np.zeros(len(df['target'])), squared=False)
         df['target'] = predictions / x * calibrate_rms
-        
+
     return df[['id','target']]
 
 
@@ -2389,7 +2389,7 @@ def gen_submission(TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
             print(f"loss on training: {loss_on_train}")
 
         pred_sum, _, _ = pred_df(test, config)
-        
+
         to_ret = pred_sum
 
 
@@ -2404,10 +2404,10 @@ def gen_submission(TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
         print(f"loss on training: {loss_on_train}")
         to_ret = pred_sum_train
 
-        
+
     if not TRAIN_MODE and gen_file:
         pred.to_csv('./submission.csv',index=False)
-        
+
     return to_ret
 
 
@@ -2424,7 +2424,7 @@ def average_ensemble(ts_to_scores):
 
 def fit_ensemble_preds_then_ensemble(fit_ensemble_preds, ts_to_scores):
     model_preds = pd.read_csv(fit_ensemble_preds)
-    
+
     from sklearn.linear_model import RidgeCV
     import math
     #X, y = load_diabetes(return_X_y=True)
@@ -2433,15 +2433,15 @@ def fit_ensemble_preds_then_ensemble(fit_ensemble_preds, ts_to_scores):
     clf = RidgeCV().fit(model_preds[[col for col in model_preds.columns if col[:5] == "pred_"]], model_preds['target'])
     #clf.score(X, y)
     print(f"fit best score: {math.sqrt(-clf.best_score_)}")
-    
-    
+
+
     keys = list(ts_to_scores.keys())
     for k in keys:
         assert f"pred_{k}" in model_preds.columns
     for col in model_preds.columns:
         if col[:5] == "pred_":
             assert int(col[5:]) in keys
-            
+
     return clf.predict(np.hstack([ts_to_scores[int(col[5:])].reshape(-1,1) for col in model_preds.columns if col[:5] == "pred_"]))
     #return clf.predict([ts_to_scores[int(col[5:])] for col in model_preds.columns if col[:5] == "pred_"])
 
@@ -2450,7 +2450,7 @@ import pickle
 def get_upload_dir(ts):
     if in_private_env:
         return f"pretrained-{ts}"
-    
+
     if os.path.exists(f"../input/single-model-v14-{ts}"):
         return f"single-model-v14-{ts}"
     elif os.path.exists(f"../input/single-model-v13-{ts}"):
@@ -2480,11 +2480,11 @@ def get_upload_dir(ts):
     else:
         return f"single-model-{ts}"
 
-def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = average_ensemble, all_folds=False, 
+def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = average_ensemble, all_folds=False,
                          use_embed=False, save_training_features=False, calibrate_rms=None, gen_file=True,
                          fit_ensemble_preds=None):
-    
-    
+
+
     #pred_sum = np.zeros((len(test)))
     ts_to_scores = {}
     ts_fold_to_scores = {}
@@ -2495,15 +2495,15 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
     for ts in tss:
         upload_dir = get_upload_dir(ts)
         if in_private_env:
-            
+
             config = json.load(open(f'crp/data/{upload_dir}/model_2/training_config.json'))
         else:
             config = json.load(open(f'../input/{upload_dir}/model_2/training_config.json'))
 
-        
+
         if TEST_ON_TRAINING:
             # test first...
-            pred_sum_train, scores_train, embeds_train = pred_df(train[['excerpt','id']], config, 
+            pred_sum_train, scores_train, embeds_train = pred_df(train[['excerpt','id']], config,
                     upload_name=get_upload_dir(ts))
 
 
@@ -2516,8 +2516,8 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
                 ts_fold_to_scores_on_training[(ts,i)] = score
             for i, embed in enumerate(embeds_train):
                 ts_fold_to_embeds_on_training[(ts,i)] = embed
-            
-        pred, scores, embeds = pred_df(test, config, 
+
+        pred, scores, embeds = pred_df(test, config,
                                        upload_name=get_upload_dir(ts))
 
 
@@ -2528,23 +2528,23 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
             ts_fold_to_embeds[(ts,i)] = embed
         #pred_sum += pred
         #print(pred.head())
-        
-        
+
+
         torch.cuda.empty_cache()
         gc.collect()
-    
+
     if TEST_ON_TRAINING:
         if use_embed:
             pred_sum_train = ensemble_func(ts_fold_to_embeds_on_training)
             if save_training_features:
                 with open('training_features.pkl', 'wb') as f:
                     pickle.dump(ts_fold_to_embeds_on_training, f)
-                
+
         elif all_folds:
             pred_sum_train = ensemble_func(ts_fold_to_scores_on_training)
         else:
             pred_sum_train = ensemble_func(ts_to_scores_on_training)
-            
+
         loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
         print(f"ensembled loss on training: {loss_on_train}")
         assert loss_on_train < 0.55, f"ensembled loss on training: {loss_on_train}"
@@ -2563,7 +2563,7 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
         pred_res = create_submission(test, pred_sum, calibrate_rms=calibrate_rms)
         pred_res.to_csv('./submission.csv',index=False)
     return pred_sum
-    
+
 
 
 # In[ ]:
@@ -2628,43 +2628,43 @@ def convert_list_to_tuple(df):
     return df
 
 def get_conf_rank(precondition=None, max_seed_count=None):
-    
+
     explored_df = get_explored_df() #pd.read_csv('crp/training_result.csv')
     #explored_df = explored_df.fillna(None)
     explored_df = convert_list_to_tuple(explored_df)
-    
+
     if precondition is not None:
         for k,v in precondition.items():
             if v is None:
                 explored_df = explored_df[explored_df[k].isna()]
             else:
                 explored_df = explored_df[explored_df[k] == v]
-                
+
     if max_seed_count is not None:
         seeds_list = SEED_to_explore[:max_seed_count]
-        
+
         explored_df = explored_df[explored_df.SEED.isin(seeds_list)]
-        
+
     fields_for_hash_no_seed = fields_for_hash.copy()
     fields_for_hash_no_seed.remove('SEED')
-    
-    
+
+
     # dedup seeds...
     explored_df = explored_df.sort_values('saving_ts').copy()
     print(f"before dedup seed:{len(explored_df)}")
     explored_df = explored_df.drop_duplicates(['SEED'] + fields_for_hash_no_seed, keep='last')
     print(f"after dedup seed:{len(explored_df)}")
-        
 
 
-    sorted_df = explored_df.groupby(fields_for_hash_no_seed, as_index=False, dropna=False).agg(mean_loss=('total_loss',"mean"), 
+
+    sorted_df = explored_df.groupby(fields_for_hash_no_seed, as_index=False, dropna=False).agg(mean_loss=('total_loss',"mean"),
                                                                                                seeds=('SEED', lambda x: x.to_list()),
                                                                                                tss=('saving_ts', lambda x: x.to_list()),
                                                                                                mean_all_folds=('all_folds_loss', 'mean'),
                                                                                                run_ts=('saving_ts','min'),
                                                                                  run_count=('total_loss','count'),
                                                                                  loss_std=('total_loss','std')).sort_values('mean_loss')
-    
+
     if len(sorted_df) == 0:
         return sorted_df
     #print(sorted_df.apply(get_conf_name_by_diff_base, axis=1))
@@ -2675,20 +2675,20 @@ def get_conf_rank(precondition=None, max_seed_count=None):
 
 
 def explore_confs(precondition,configs_to_explore, max_test_count = 40):
-    
+
     preconditioned_configs_to_explore = {**base_config, **precondition, **configs_to_explore}
     conf_list = generate_config_list(preconditioned_configs_to_explore)
     conf_list = constraint_conflist(conf_list, precondition)
-    
+
     test_count = 0
     all_concluded = False
     last_best_conf = None
-    
+
     while not all_concluded and test_count < max_test_count:
         test_count += 1
 
         explored_confs = get_conf_rank(precondition)[fields_for_hash_no_seed].to_dict('records')
-        
+
         if len(explored_confs) == 0:
             best_conf = conf_list[0]
         else:
@@ -2716,6 +2716,5 @@ def explore_confs(precondition,configs_to_explore, max_test_count = 40):
             if ret != "already_concluded":
                 all_concluded = False
                 break
-                
 
-        
+
