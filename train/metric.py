@@ -153,6 +153,9 @@ def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
         if metric == 'loss':
             res = loss_fn((torch.tensor(pred_starts), torch.tensor(pred_ends)), (torch.tensor(target_starts), torch.tensor(target_ends)))
         elif metric == 'jaccard':
+            for context, pred_start, pred_end, target_start, target_end in \
+                zip(contexts, pred_starts, pred_ends, target_starts, target_ends):
+                logging.info(f"{pred_start}:{pred_end}, {target_start}:{target_end}")
             res = [jaccard(context[pred_start:pred_end], context[target_start:target_end])
                    for context, pred_start, pred_end, target_start, target_end in
                    zip(contexts, pred_starts, pred_ends, target_starts, target_ends)]
