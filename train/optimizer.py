@@ -396,7 +396,6 @@ def make_scheduler(optimizer, train_loader, config):
     else:
         warmup_steps = 0
         
-    print(f"using warmup steps: {warmup_steps}")
     logging.info(f"using warmup steps: {warmup_steps}")
         
     if decay_name == 'step':

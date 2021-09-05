@@ -238,7 +238,7 @@ def get_data_kfold_split(config):
 
         if config['TEST_RUN']:
             train = train.sample(n=100)
-            print(f"!!! test run !!! n=100")
+            logging.info(f"!!! test run !!! n=100")
         train_idx = train[:len(external_train)].index.values
         test_idx = train[len(external_train):].index.values
         split_output = [(train_idx, test_idx)]
@@ -249,7 +249,7 @@ def get_data_kfold_split(config):
 
             if config['TEST_RUN']:
                 train = train.sample(n=100)
-                print(f"!!! test run !!! n=100")
+                logging.info(f"!!! test run !!! n=100")
 
             bins = get_stratified_col(train)
 
@@ -263,7 +263,7 @@ def get_data_kfold_split(config):
 def optimal_num_of_loader_workers(config):
     if config['FORCE_NUM_LOADER_WORKER'] is not None:
         num_woker = config['FORCE_NUM_LOADER_WORKER']
-        print(f"using number of loader worker: {num_woker}")
+        logging.info(f"using number of loader worker: {num_woker}")
         return config['FORCE_NUM_LOADER_WORKER']
     num_cpus = multiprocessing.cpu_count()
     num_gpus = torch.cuda.device_count()
@@ -293,17 +293,17 @@ def make_loader(
     if add_augment_conf is not None and isinstance(add_augment_conf, str):
         train_aug = pd.read_csv(add_augment_conf)
         # exclude ids in val:
-        print(f"before exclude ids in val len train_aug: {len(train_aug)}")
+        logging.info(f"before exclude ids in val len train_aug: {len(train_aug)}")
         train_aug = train_aug[~train_aug.id.isin(valid_set.id.values)]
-        print(f"after exclude ids in val len train_aug: {len(train_aug)}")
+        logging.info(f"after exclude ids in val len train_aug: {len(train_aug)}")
         train_set = train_set.append(train_aug).sample(frac=1).reset_index(drop=True)
     elif add_augment_conf is not None and isinstance(add_augment_conf, list):
         for aug in add_augment_conf:
             train_aug = pd.read_csv(aug)
             # exclude ids in val:
-            print(f"before exclude ids in val len train_aug: {len(train_aug)}")
+            logging.info(f"before exclude ids in val len train_aug: {len(train_aug)}")
             train_aug = train_aug[~train_aug.id.isin(valid_set.id.values)]
-            print(f"after exclude ids in val len train_aug: {len(train_aug)}")
+            logging.info(f"after exclude ids in val len train_aug: {len(train_aug)}")
             train_set = train_set.append(train_aug).sample(frac=1).reset_index(drop=True)
 
     else:
@@ -327,7 +327,7 @@ def make_loader(
 
     train_dataset = DatasetRetriever(train_features)
     valid_dataset = DatasetRetriever(valid_features)
-    print(f"Num examples Train= {len(train_dataset)}, Num examples Valid={len(valid_dataset)}")
+    logging.info(f"Num examples Train= {len(train_dataset)}, Num examples Valid={len(valid_dataset)}")
 
     train_sampler = RandomSampler(train_dataset)
     valid_sampler = SequentialSampler(valid_dataset)
@@ -385,7 +385,7 @@ class CommonLitDataset(nn.Module):
 
             
         if config['DEBUG_PRINT']:
-            print(data.head())
+            logging.info(data.head())
         
     def __len__(self):
         return len(self.excerpt)

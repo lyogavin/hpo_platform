@@ -163,7 +163,6 @@ def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fo
     distutils.dir_util.copy_tree(path.parent.absolute(), f'{saving_dir}/src/')
 
     logging.info(f"saved in {saving_dir}/model_{fold}")
-    print(f"saved in {saving_dir}/model_{fold}")
 
 def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, device, config,
              exp_record,
@@ -341,13 +340,13 @@ def infer(data_loader, model, device, config, return_embed = False, use_tqdm=Tru
             
             
             if not printed_debug_info:
-                print(f"input to model:{data}")
-                print(f"input to model shape:{data['attention_mask'].shape}")
+                logging.info(f"input to model:{data}")
+                logging.info(f"input to model shape:{data['attention_mask'].shape}")
                 
             outputs, embeds = model(**data)
             if not printed_debug_info:
-                print(f"output to model:{outputs}")
-                print(f"output to model shape:{outputs.shape}")
+                logging.info(f"output to model:{outputs}")
+                logging.info(f"output to model shape:{outputs.shape}")
                 
                 printed_debug_info = True
             outputs = outputs.squeeze(-1)
@@ -382,7 +381,7 @@ import pprint
 import shutil
 
 def run(config, import_file_path=None):
-    print(f"running conf: {config}")
+    logging.info(f"running conf: {config}")
     #if not config['NEW_SEEDS']:
     #    seed_everything(config['SEED'])
 
@@ -391,7 +390,6 @@ def run(config, import_file_path=None):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
         
-    print(f"using device:{device}")
     logging.info(f"using device:{device}")
 
 
@@ -467,7 +465,6 @@ def run(config, import_file_path=None):
             original_model.to(device)
         
         if config['GPU_PARALLEL_IDS'] is not None:
-            print(f"using device ids: {config['GPU_PARALLEL_IDS']}")
             logging.info(f"using device ids: {config['GPU_PARALLEL_IDS']}")
             model = torch.nn.DataParallel(original_model, device_ids=config['GPU_PARALLEL_IDS'])
         else:
@@ -505,8 +502,7 @@ def run(config, import_file_path=None):
         logging.info(f'===== Fold Time: {elp_fold} =====')
 
         logging.info(exp_record)
-        print(exp_record)
-        
+
         # cleanup after fold is done
         logging.info(f'cleanup after fold is done')
         del model
@@ -514,7 +510,6 @@ def run(config, import_file_path=None):
         gc.collect()
         torch.cuda.empty_cache()
         
-    print(f"run done with jaccard: {exp_record.get_mean_jaccard()}")
     logging.info(f"run done with jaccard: {exp_record.get_mean_jaccard()}")
     exp_record.persist()
     return saving_ts, saving_dir, exp_record.get_mean_jaccard(), exp_record
@@ -561,23 +556,22 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
             pretrain_paths.append(path_in_str)
 
     pretrain_paths.sort()
-    print(pretrain_paths)
     pred_sum = np.zeros((len(df)))
 
-    print(f'loadding tokenizer from {pretrain_paths[0]}')
+    logging.info(f'loadding tokenizer from {pretrain_paths[0]}')
 
     # fix GPT2 save pretrain issue...
-    print(f"loading tokenizer for {config['TOKENIZER']}")
+    logging.info(f"loading tokenizer for {config['TOKENIZER']}")
     if config['TOKENIZER'] == 'microsoft/deberta-base':
-        print(f"fix GPT2 save pretrain issue by direct load from huggingface registry...")
+        logging.info(f"fix GPT2 save pretrain issue by direct load from huggingface registry...")
         if os.path.exists("../input/deberta-base-uncased-tokenizer"):
-            print(f"loading from ../input/deberta-base-uncased-tokenizer")
+            logging.info(f"loading from ../input/deberta-base-uncased-tokenizer")
             tokenizer = DebertaTokenizer.from_pretrained(f"../input/deberta-base-uncased-tokenizer")
         elif os.path.exists(f"{str(pretrain_paths[0])}/tokenizer/"):
-            print(f"loading from {pretrain_paths[0]}/tokenizer/")
+            logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
             tokenizer = DebertaTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
         else:
-            print(f"loading from {pretrain_paths[0]}")
+            logging.info(f"loading from {pretrain_paths[0]}")
             tokenizer = DebertaTokenizer.from_pretrained(f"{str(pretrain_paths[0])}")
     else:
         if os.path.exists(f"{str(pretrain_paths[0])}/tokenizer/"):
@@ -590,10 +584,10 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
                 os.system(f'cp {from_dir}/config.json tmp_{tmp_ts}/')
                 tokenizer = AutoTokenizer.from_pretrained(f"tmp_{tmp_ts}/")
             else:
-                print(f"loading from {pretrain_paths[0]}/tokenizer/")
+                logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
                 tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
         else:
-            print(f"loading from {pretrain_paths[0]}")
+            logging.info(f"loading from {pretrain_paths[0]}")
             tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}")
 
     sub_ds = CommonLitDataset(df, tokenizer, config)    
@@ -627,7 +621,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
             
         model_config = {**base_config, **model_config}
         
-        print(f"loading model class:{config['MODEL_CLASS']}\n pretrain: {str(p)}, config:{model_config}")
+        logging.info(f"loading model class:{config['MODEL_CLASS']}\n pretrain: {str(p)}, config:{model_config}")
       
         if model_config['EMBED_OTHER_GPU'] is not None:
             model_config['EMBED_OTHER_GPU'] = 0
@@ -654,7 +648,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
         #print(f"output to infer:{output_embeds}")
 
         #print(sum)
-        print(outputs)
+        logging.info(outputs)
 
         pred_sum += outputs
         scores.append(outputs)
@@ -662,7 +656,7 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
         
         
         # cleanup after fold is done
-        print(f'cleanup after model is done')
+        logging.info(f'cleanup after model is done')
         del model
         gc.collect()
         torch.cuda.empty_cache()
@@ -700,7 +694,7 @@ def gen_submission(TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
             loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
             assert loss_on_train < 0.55
 
-            print(f"loss on training: {loss_on_train}")
+            logging.info(f"loss on training: {loss_on_train}")
 
         pred_sum, _, _ = pred_df(test, config)
         
@@ -708,14 +702,14 @@ def gen_submission(TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
 
 
         pred = create_submission(test, pred_sum)
-        print(pred.head())
+        logging.info(pred.head())
     else:
         # test infer on training set when it's training mode...
         pred_sum_train, _, _ = pred_df(train[['excerpt','id']], config)
         loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
         assert loss_on_train < 0.55, f"{loss_on_train} shoudl be small"
 
-        print(f"loss on training: {loss_on_train}")
+        logging.info(f"loss on training: {loss_on_train}")
         to_ret = pred_sum_train
 
         
@@ -746,7 +740,7 @@ def fit_ensemble_preds_then_ensemble(fit_ensemble_preds, ts_to_scores):
 
     clf = RidgeCV().fit(model_preds[[col for col in model_preds.columns if col[:5] == "pred_"]], model_preds['target'])
     #clf.score(X, y)
-    print(f"fit best score: {math.sqrt(-clf.best_score_)}")
+    logging.info(f"fit best score: {math.sqrt(-clf.best_score_)}")
     
     
     keys = list(ts_to_scores.keys())
@@ -824,7 +818,7 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
             loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
             assert loss_on_train < 0.55
 
-            print(f"loss on training: {loss_on_train}")
+            logging.info(f"loss on training: {loss_on_train}")
             ts_to_scores_on_training[ts] = pred_sum_train
             for i, score in enumerate(scores_train):
                 ts_fold_to_scores_on_training[(ts,i)] = score
@@ -841,7 +835,7 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
         for i, embed in enumerate(embeds):
             ts_fold_to_embeds[(ts,i)] = embed
         #pred_sum += pred
-        #print(pred.head())
+        #logging.info(pred.head())
         
         
         torch.cuda.empty_cache()
@@ -860,7 +854,7 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
             pred_sum_train = ensemble_func(ts_to_scores_on_training)
             
         loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
-        print(f"ensembled loss on training: {loss_on_train}")
+        logging.info(f"ensembled loss on training: {loss_on_train}")
         assert loss_on_train < 0.55, f"ensembled loss on training: {loss_on_train}"
 
 

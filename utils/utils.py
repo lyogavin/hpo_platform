@@ -195,16 +195,16 @@ def calculate_p_value_mde(control_points_or_not_list, treatment_point_or_not_lis
     # 10. Comparing against ground truth
     
     if False:
-        print("sum_control_numerator is {}".format(sum_control_numerator))
-        print("sum_control_denominator is {}".format(sum_control_denominator))
-        print("sum_treatment_numerator is {}".format(sum_treatment_numerator))
-        print("sum_treatment_denominator is {}".format(sum_treatment_denominator))
-        print("mean_treatment is {}".format(mean_treatment))
-        print("mean_control is {}".format(mean_control))
-        print("percent_change is {}".format(percent_change))
-        print("pvalue is {}".format(pvalue))
-        print("stderr is {}".format(stderr))
-        print("ci_95 is {}".format(ci_95))
+        logging.info("sum_control_numerator is {}".format(sum_control_numerator))
+        logging.info("sum_control_denominator is {}".format(sum_control_denominator))
+        logging.info("sum_treatment_numerator is {}".format(sum_treatment_numerator))
+        logging.info("sum_treatment_denominator is {}".format(sum_treatment_denominator))
+        logging.info("mean_treatment is {}".format(mean_treatment))
+        logging.info("mean_control is {}".format(mean_control))
+        logging.info("percent_change is {}".format(percent_change))
+        logging.info("pvalue is {}".format(pvalue))
+        logging.info("stderr is {}".format(stderr))
+        logging.info("ci_95 is {}".format(ci_95))
     
     
     
@@ -290,12 +290,12 @@ def diff_dict(dict1, dict2, to_exclude = None):
     try:
         set1 = set([(k,tuple(v)) if isinstance(v, list) else (k,v) for k,v in dict1.items()])
     except TypeError as te:
-        print(te)
+        logging.info(te)
         raise te
     try:
         set2 = set([(k,tuple(v)) if isinstance(v, list) else (k,v) for k,v in dict2.items()])
     except TypeError as te:
-        print(te)
+        logging.info(te)
         raise te
     return {k:dict1[k] for k in dict(set1 ^ set2).keys()}
 

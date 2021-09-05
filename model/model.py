@@ -203,11 +203,11 @@ class SpanningQAModel(nn.Module):
 
 
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
 
             self.roberta = AutoModel.from_pretrained(from_pretrain, config = self.model_config)
 
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
@@ -282,10 +282,10 @@ class CRPModel(nn.Module):
         
             
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
             self.roberta = AutoModel.from_pretrained(from_pretrain)
             
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
@@ -405,10 +405,10 @@ class AttentionHeadedModel(nn.Module):
         #self.roberta = AutoModel.from_pretrained(model_config['BERT_PATH'])
         
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
             self.roberta = AutoModel.from_pretrained(from_pretrain)
             
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
@@ -506,10 +506,10 @@ class SimpleCNNHeadedModel(nn.Module):
         #self.roberta = AutoModel.from_pretrained(model_config['BERT_PATH'])
         
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
             self.roberta = AutoModel.from_pretrained(from_pretrain)
             
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
@@ -620,10 +620,10 @@ class TextCNNHeadedModel(nn.Module):
         #self.roberta = AutoModel.from_pretrained(model_config['BERT_PATH'])
         
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
             self.roberta = AutoModel.from_pretrained(from_pretrain)
             
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
@@ -688,7 +688,7 @@ def gbm_scores_ensemble(ts_to_scores, model_save_file, all_folds=False, use_embe
     
     if use_embed:
         feature_df = np.concatenate([v for (ts, fold),v in ts_to_scores.items()], axis=1)
-        print(f"feature cols: {[(ts, fold) for (ts, fold),v in ts_to_scores.items()]}")
+        logging.info(f"feature cols: {[(ts, fold) for (ts, fold),v in ts_to_scores.items()]}")
     elif not all_folds:
         feature_df = pd.DataFrame({f"pred_{ts}":v for ts,v in ts_to_scores.items()})
     else:
@@ -704,7 +704,7 @@ def svr_scores_ensemble(ts_to_scores, model_save_file, all_folds=False, use_embe
     
     if use_embed:
         feature_df = np.concatenate([v for (ts, fold),v in ts_to_scores.items()], axis=1)
-        print(f"feature cols: {[(ts, fold) for (ts, fold),v in ts_to_scores.items()]}")
+        logging.info(f"feature cols: {[(ts, fold) for (ts, fold),v in ts_to_scores.items()]}")
     elif not all_folds:
         feature_df = pd.DataFrame({f"pred_{ts}":v for ts,v in ts_to_scores.items()})
     else:
@@ -726,7 +726,7 @@ class LitModel(nn.Module):
         super().__init__()                     
         
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
             config = AutoConfig.from_pretrained(from_pretrain)
             config.update({"output_hidden_states":True, 
                        "hidden_dropout_prob": 0.0,
@@ -739,7 +739,7 @@ class LitModel(nn.Module):
                 
             self.roberta = AutoModel.from_pretrained(from_pretrain, config=config)
             
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
@@ -780,7 +780,7 @@ class LitModel(nn.Module):
         ).to('cuda:0')
         
         if model_config['FIX_DROPOUT'] and model_config['ROBERTA_ATTENTION_DROPOUT'] is not None:
-            print(f"dropout on, dump roberta config:{self.roberta.config}")
+            logging.info(f"dropout on, dump roberta config:{self.roberta.config}")
         self.model_config = model_config
         
 
@@ -863,11 +863,11 @@ class MeanPoolingModel(nn.Module):
         super().__init__()                     
         
         if from_pretrain is not None:
-            print("load pretrain from automodel")
+            logging.info("load pretrain from automodel")
             config = AutoConfig.from_pretrained(from_pretrain)
             self.roberta = AutoModel.from_pretrained(from_pretrain, config=config)
             
-            print("load pretrain directly from file")
+            logging.info("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
