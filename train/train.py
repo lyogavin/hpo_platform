@@ -463,7 +463,7 @@ def run(config, import_file_path=None):
             assert "(head_dropout): Dropout" in str(original_model)
 
             
-        if config['EMBED_OTHER_GPU'] is None:
+        if not config['EMBED_OTHER_GPU']:
             original_model.to(device)
         
         if config['GPU_PARALLEL_IDS'] is not None:
