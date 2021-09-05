@@ -178,7 +178,7 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
     last_train_eval_step = 0
     eval_period = config['EVAL_PERIOD']
     train_eval_period = config['TRAIN_EVAL_PERIOD']
-    training_log = config['TRAINING_LOG']
+    #training_log = config['TRAINING_LOG']
     
     losses = []
     train_total_meter = AccumulateMeter()
@@ -416,11 +416,11 @@ def run(config, import_file_path=None):
     assert unpublished_changes == 0, f"expect no unpublished changes, but there are: {unpublished_changes}"
 
 
-    training_log = dict()
-    config.set('runtime', 'TRAINING_LOG', training_log)
+    #training_log = dict()
+    #config.set('runtime', 'TRAINING_LOG', training_log)
 
     git_head_id = repo.head.object.hexsha
-    training_log['git_head_id'] = git_head_id
+    #training_log['git_head_id'] = git_head_id
     logging.info(f"git head id {git_head_id}")
     
     best_loss_sum = 0.
