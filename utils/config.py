@@ -1,4 +1,4 @@
-
+import pprint
 
 default_runtime_config = {
     'DEBUG_PRINT':False,
@@ -9,9 +9,11 @@ default_runtime_config = {
     'GPU_PARALLEL_IDS':None,
     'VALID_BATCH_SIZE':16,
     'DATA_ROOT_PATH':'../chaii/input/',
-    'OUTPUT_ROOT_PATH':'../chaii/output/'
+    'OUTPUT_ROOT_PATH':'../chaii/output/',
 }
 default_train_config = {
+    # test run...
+    'TEST_RUN':False,
 
     # optimizer
     'LR':1e-5,
@@ -48,6 +50,7 @@ default_train_config = {
     'MODEL_CLASS':None,
     'PRETRAIN_TO_LOAD':None,
     'HEAD_DROPOUT':0,
+    'BERT_PATH':None,
 
 
     #train
@@ -62,7 +65,6 @@ default_train_config = {
     'AUTO_SCALER':False,
     'RESEED_EVERY_FOLD':True,
     'STOP_AT_FOLD':-1,
-    'BERT_PATH':None,
 
 }
 
@@ -74,5 +76,9 @@ class TrainingConfig:
     def __getitem__(self, key):
         assert key in default_train_config or key in default_runtime_config, f"must define default value for key: {key}"
         return self.config[key]
+
+
+    def __str__(self):
+        return pprint.pformat(self.config)
 
 

@@ -5,13 +5,13 @@
 
 import configparser
 import torch
-import torchvision
+#import torchvision
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.transforms import ToTensor
-from torchvision.utils import make_grid
+#from torchvision.transforms import ToTensor
+#from torchvision.utils import make_grid
 from torch.utils.data import random_split
 
 from pathlib import Path
@@ -26,7 +26,7 @@ import warnings
 from sklearn.model_selection import StratifiedKFold,KFold
 from scipy.stats import spearmanr
 warnings.filterwarnings("ignore")
-get_ipython().magic('matplotlib inline')
+#get_ipython().magic('matplotlib inline')
 
 import os
 import time
@@ -105,7 +105,7 @@ from transformers import (
     get_polynomial_decay_schedule_with_warmup
 )
 import os
-from model import loss_fn
+from train.loss import loss_fn
 
 
 class AccumulateMeter(object):

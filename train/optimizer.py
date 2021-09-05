@@ -4,13 +4,13 @@
 
 import configparser
 import torch
-import torchvision
+#import torchvision
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.transforms import ToTensor
-from torchvision.utils import make_grid
+#from torchvision.transforms import ToTensor
+#from torchvision.utils import make_grid
 from torch.utils.data import random_split
 
 from pathlib import Path
@@ -25,7 +25,7 @@ import warnings
 from sklearn.model_selection import StratifiedKFold,KFold
 from scipy.stats import spearmanr
 warnings.filterwarnings("ignore")
-get_ipython().magic('matplotlib inline')
+#get_ipython().magic('matplotlib inline')
 
 import os
 import time
@@ -374,7 +374,7 @@ def make_optimizer(model, config):
     else:
         raise Exception('Unknown optimizer: {}'.format(optimizer_name))
 
-def make_scheduler(optimizer, train_loader, config, train_loader):
+def make_scheduler(optimizer, train_loader, config):
     decay_name=config['DECAY_NAME'] #'cosine_warmup',
 
     #t_max=config['EPOCHS']

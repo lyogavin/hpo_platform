@@ -5,13 +5,13 @@
 
 import configparser
 import torch
-import torchvision
+#import torchvision
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.transforms import ToTensor
-from torchvision.utils import make_grid
+#from torchvision.transforms import ToTensor
+#from torchvision.utils import make_grid
 from torch.utils.data import (random_split,
     Dataset, DataLoader,
     SequentialSampler, RandomSampler
@@ -29,7 +29,7 @@ import warnings
 from sklearn.model_selection import StratifiedKFold,KFold
 from scipy.stats import spearmanr
 warnings.filterwarnings("ignore")
-get_ipython().magic('matplotlib inline')
+#get_ipython().magic('matplotlib inline')
 
 import os
 import time
@@ -235,6 +235,10 @@ def get_data_kfold_split(config):
         test = train
         train = external_train
         train = train.append(test)
+
+        if config['TEST_RUN']:
+            train = train.sample(n=1000)
+            print(f"!!! test run !!! n=1000")
         train_idx = train[:len(external_train)].id.values
         test_idx = train[len(external_train):].id.values
         split_output = [(train_idx, test_idx)]
@@ -242,6 +246,11 @@ def get_data_kfold_split(config):
 
 
         if config['STRATEFIED']:
+
+            if config['TEST_RUN']:
+                train = train.sample(n=1000)
+                print(f"!!! test run !!! n=1000")
+
             bins = get_stratified_col(train)
 
             split_output = kfold.split(X=train,y=bins)

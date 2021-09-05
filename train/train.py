@@ -5,13 +5,13 @@
 import configparser
 
 import torch
-import torchvision
+#import torchvision
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.transforms import ToTensor
-from torchvision.utils import make_grid
+#from torchvision.transforms import ToTensor
+#from torchvision.utils import make_grid
 from torch.utils.data import random_split
 
 from pathlib import Path
@@ -26,7 +26,7 @@ import warnings
 from sklearn.model_selection import StratifiedKFold,KFold
 from scipy.stats import spearmanr
 warnings.filterwarnings("ignore")
-get_ipython().magic('matplotlib inline')
+#get_ipython().magic('matplotlib inline')
 
 import os
 import time
@@ -82,11 +82,11 @@ import sys
 sys.path.append('../')
 
 from utils.utils import *
-from loss import *
-from data import *
-from optimizer import *
+from train.loss import *
+from train.data import *
+from train.optimizer import *
 from model.model import *
-from metric import *
+from train.metric import *
 from model import model
 from exp_record_store.exp_record import ExpRecord
 logging = utils.logging
@@ -477,7 +477,7 @@ def run(config, import_file_path=None):
             
 
         optimizer = make_optimizer(original_model, config)
-        scheduler = make_scheduler(optimizer, train_loader, config, train_loader)
+        scheduler = make_scheduler(optimizer, train_loader, config)
             
         best_loss = 99999
         

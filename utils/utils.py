@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import torch
-import torchvision
+#import torchvision
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.transforms import ToTensor
-from torchvision.utils import make_grid
+#from torchvision.transforms import ToTensor
+#from torchvision.utils import make_grid
 from torch.utils.data import random_split
 
 from pathlib import Path
@@ -283,7 +283,7 @@ def seed_everything(seed=43):
 
 import copy
 
-def diff_dict(dict1, dict2, to_exclude = keys_to_exclude_in_hash):
+def diff_dict(dict1, dict2, to_exclude = None):
     dict1 = copy.copy(dict1)
     dict2 = copy.copy(dict2)
     for k in to_exclude:

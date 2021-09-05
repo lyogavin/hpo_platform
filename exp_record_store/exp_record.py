@@ -31,5 +31,5 @@ class ExpRecord:
         return mean_loss
 
     def __str__(self):
-        return f"saving_ts: {self.saving_ts}, saving_dir: {self.saving_dir}, logging_file_path: {self.logging_file_path} "
+        return f"saving_ts: {self.saving_ts}, saving_dir: {self.saving_dir}, logging_file_path: {self.logging_file_path} " \
             f"git_head_id: {self.git_head_id} mean_jaccard: {self.get_mean_jaccard()} mean_loss: {self.get_mean_loss()}"
