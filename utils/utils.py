@@ -53,18 +53,14 @@ import logging, sys
 
 run_ts = int(time.time())
 
-logging_file_path = f"crp/training_log_{run_ts}.log"
+os.makedirs('./logs', exist_ok=True)
+logging_file_path = f"./logs/training_log_{run_ts}.log"
 
-if os.path.exists("crp"):
-    handlers=[
-        logging.FileHandler(logging_file_path),
-        #logging.StreamHandler(sys.stdout)
-    ]
-else:
-    handlers=[
-        #logging.FileHandler(logging_file_path),
-        logging.StreamHandler(sys.stdout)
-    ]
+
+handlers=[
+    logging.FileHandler(logging_file_path),
+    logging.StreamHandler(sys.stdout)
+]
     
 
 logging.basicConfig(

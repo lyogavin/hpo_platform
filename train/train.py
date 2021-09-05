@@ -89,7 +89,8 @@ from model.model import *
 from train.metric import *
 from model import model
 from exp_record_store.exp_record import ExpRecord
-logging = utils.logging
+from utils.utils import logging
+#logging = utils.logging
 
 
 # In[2]:
@@ -515,6 +516,7 @@ def run(config, import_file_path=None):
         
     print(f"run done with jaccard: {exp_record.get_mean_jaccard()}")
     logging.info(f"run done with jaccard: {exp_record.get_mean_jaccard()}")
+    exp_record.persist()
     return saving_ts, saving_dir, exp_record.get_mean_jaccard(), exp_record
 
 

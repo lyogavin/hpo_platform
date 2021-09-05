@@ -88,7 +88,7 @@ from transformers import (
     get_cosine_with_hard_restarts_schedule_with_warmup
 )
 import os
-
+from utils.utils import logging
 def get_tokenizer(config):
     if 'megatron' in config['TOKENIZER']:
         tokenizer = BertTokenizer.from_pretrained(config['TOKENIZER'])
