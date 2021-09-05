@@ -102,11 +102,10 @@ from scipy import stats
 
 
 
-#import_file_name = 'model/model.py'
+import_file_name = 'model'
 
-#model_import = __import__(import_file_name)
-
-
+model_import = __import__(import_file_name)
+model_import = getattr(model_import, 'model')
 
 
                 
@@ -378,9 +377,7 @@ def infer(data_loader, model, device, config, return_embed = False, use_tqdm=Tru
 from sklearn import model_selection,metrics
 import numpy as np
 import transformers
-from transformers import AdamW
 import pprint
-from transformers import get_linear_schedule_with_warmup
 import shutil
 
 def run(config, import_file_path=None):
@@ -409,11 +406,12 @@ def run(config, import_file_path=None):
 
     # make sure no unpublished changes...
     repo = git.Repo(search_parent_directories=True)
-    assert len(repo.index.diff(None)) == 0, f"expect 0 unstage files, but there are: {len(repo.index.diff(None))}"
-    uncommit_changes = len(repo.index.diff('HEAD'))
-    assert uncommit_changes == 0, f"expect 0 unstage files, but there are: {uncommit_changes}"
-    unpublished_changes = len(list(repo.iter_commits('main@{u}..main')))
-    assert unpublished_changes == 0, f"expect no unpublished changes, but there are: {unpublished_changes}"
+    if not config['TEST_RUN']:
+        assert len(repo.index.diff(None)) == 0, f"expect 0 unstage files, but there are: {len(repo.index.diff(None))}"
+        uncommit_changes = len(repo.index.diff('HEAD'))
+        assert uncommit_changes == 0, f"expect 0 unstage files, but there are: {uncommit_changes}"
+        unpublished_changes = len(list(repo.iter_commits('main@{u}..main')))
+        assert unpublished_changes == 0, f"expect no unpublished changes, but there are: {unpublished_changes}"
 
 
     #training_log = dict()
@@ -449,14 +447,14 @@ def run(config, import_file_path=None):
         logging.info(f'========== Fold: {fold} ==========')
 
         
-        model_class = getattr(model, config['MODEL_CLASS'])
+        model_class = getattr(model_import, config['MODEL_CLASS'])
 
 
         if config['PRETRAIN_TO_LOAD'] is not None:
             original_model = model_class(from_pretrain=config['PRETRAIN_TO_LOAD'],
-                                         model_config=config)
+                                         config=config)
         else:
-            original_model = model_class(model_config=config)
+            original_model = model_class(config=config)
             
 
             

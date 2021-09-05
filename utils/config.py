@@ -10,6 +10,7 @@ default_runtime_config = {
     'VALID_BATCH_SIZE':16,
     'DATA_ROOT_PATH':'../chaii/input/',
     'OUTPUT_ROOT_PATH':'../chaii/output/',
+    'FORCE_NUM_LOADER_WORKER':None
 }
 default_train_config = {
     # test run...
@@ -49,7 +50,7 @@ default_train_config = {
     'MODEL_CONFIG':None,
     'MODEL_CLASS':None,
     'PRETRAIN_TO_LOAD':None,
-    'HEAD_DROPOUT':0,
+    'HEAD_DROPOUT':None,
     'BERT_PATH':None,
 
 

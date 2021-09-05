@@ -32,6 +32,9 @@ import time
 import random
 import gc
 import subprocess
+from transformers import AdamW
+from transformers import get_linear_schedule_with_warmup
+
 
 from colorama import Fore, Back, Style
 red = Fore.RED

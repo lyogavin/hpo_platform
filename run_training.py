@@ -14,6 +14,7 @@ new_config = {
     'BERT_PATH': "deepset/xlm-roberta-large-squad2",
     'MODEL_CONFIG': "deepset/xlm-roberta-large-squad2",
     'MODEL_CLASS': 'SpanningQAModel',
+    'FORCE_NUM_LOADER_WORKER':0
 }
 
 config = TrainingConfig(new_config)

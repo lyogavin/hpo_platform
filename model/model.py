@@ -192,7 +192,7 @@ def model_save_pretrained(
 
 
 class SpanningQAModel(nn.Module):
-    def __init__(self, modelname_or_path, config, from_pretrain=None):
+    def __init__(self, config, from_pretrain=None):
         super(SpanningQAModel, self).__init__()
         self.config = config
         self.model_config = None
@@ -205,22 +205,22 @@ class SpanningQAModel(nn.Module):
         if from_pretrain is not None:
             print("load pretrain from automodel")
 
-            self.xlm_roberta = AutoModel.from_pretrained(from_pretrain, config = self.model_config)
+            self.roberta = AutoModel.from_pretrained(from_pretrain, config = self.model_config)
 
             print("load pretrain directly from file")
             state_dict = torch.load(os.path.join(from_pretrain, WEIGHTS_NAME), map_location=torch.device('cpu'))
             self.load_state_dict(state_dict, strict=False)
             del state_dict
         else:
-            self.xlm_roberta = AutoModel.from_pretrained(config[configparser.DEFAULTSECT]['BERT_PATH'], config = self.model_config)
+            self.roberta = AutoModel.from_pretrained(config['BERT_PATH'], config = self.model_config)
 
-        self.qa_outputs = nn.Linear(config.hidden_size, 2)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(self.model_config.hidden_size, 2)
+        self.dropout = nn.Dropout(self.model_config.hidden_dropout_prob)
         self._init_weights(self.qa_outputs)
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            module.weight.data.normal_(mean=0.0, std=self.model_config.initializer_range)
             if module.bias is not None:
                 module.bias.data.zero_()
 
@@ -230,7 +230,7 @@ class SpanningQAModel(nn.Module):
             attention_mask=None,
             # token_type_ids=None
     ):
-        outputs = self.xlm_roberta(
+        outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
         )

@@ -123,11 +123,11 @@ class AccumulateMeter(object):
         self.best = None
 
     def update(self, contexts, pred_starts, pred_ends, target_starts, target_ends):
-        self.pred_starts.extend(pred_starts.item())
-        self.pred_ends.extend(pred_ends.item())
-        self.target_starts.extend(target_starts.item())
-        self.target_ends.extend(target_ends.item())
-        self.contexts.extend(contexts.item())
+        self.pred_starts.extend(pred_starts.tolist())
+        self.pred_ends.extend(pred_ends.tolist())
+        self.target_starts.extend(target_starts.tolist())
+        self.target_ends.extend(target_ends.tolist())
+        self.contexts.extend(contexts)
 
     def get_metrics(self):
         res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)

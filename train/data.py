@@ -143,14 +143,14 @@ def prepare_train_features(config, example, tokenizer):
         sequence_ids = tokenized_example.sequence_ids(i)
 
         sample_index = sample_mapping[i]
-        answers = example["answers"]
+        answers = example["answer_text"]
 
-        if len(answers["answer_start"]) == 0:
+        if False: #len(example["answer_start"]) == 0:
             feature["start_position"] = cls_index
             feature["end_position"] = cls_index
         else:
-            start_char = answers["answer_start"][0]
-            end_char = start_char + len(answers["text"][0])
+            start_char = example["answer_start"]
+            end_char = start_char + len(example["answer_text"])
 
             token_start_index = 0
             while sequence_ids[token_start_index] != 1:
@@ -237,10 +237,10 @@ def get_data_kfold_split(config):
         train = train.append(test)
 
         if config['TEST_RUN']:
-            train = train.sample(n=1000)
-            print(f"!!! test run !!! n=1000")
-        train_idx = train[:len(external_train)].id.values
-        test_idx = train[len(external_train):].id.values
+            train = train.sample(n=100)
+            print(f"!!! test run !!! n=100")
+        train_idx = train[:len(external_train)].index.values
+        test_idx = train[len(external_train):].index.values
         split_output = [(train_idx, test_idx)]
     else:
 
@@ -248,8 +248,8 @@ def get_data_kfold_split(config):
         if config['STRATEFIED']:
 
             if config['TEST_RUN']:
-                train = train.sample(n=1000)
-                print(f"!!! test run !!! n=1000")
+                train = train.sample(n=100)
+                print(f"!!! test run !!! n=100")
 
             bins = get_stratified_col(train)
 
@@ -260,7 +260,11 @@ def get_data_kfold_split(config):
     return train, split_output
 
 
-def optimal_num_of_loader_workers():
+def optimal_num_of_loader_workers(config):
+    if config['FORCE_NUM_LOADER_WORKER'] is not None:
+        num_woker = config['FORCE_NUM_LOADER_WORKER']
+        print(f"using number of loader worker: {num_woker}")
+        return config['FORCE_NUM_LOADER_WORKER']
     num_cpus = multiprocessing.cpu_count()
     num_gpus = torch.cuda.device_count()
     optimal_value = min(num_cpus, num_gpus*4) if num_gpus else num_cpus - 1
@@ -277,7 +281,7 @@ def make_loader(
 
 
 
-    train_set, valid_set = data.loc[split_output[fold](0)], data.loc[split_output[fold](1)]
+    train_set, valid_set = data.loc[split_output[fold][0]], data.loc[split_output[fold][1]]
 
 
     # add augment...
@@ -343,7 +347,7 @@ def make_loader(
         train_dataset,
         batch_size=config['TRAIN_BATCH_SIZE'],
         sampler=train_sampler,
-        num_workers=optimal_num_of_loader_workers(),
+        num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
         drop_last=False
     )
@@ -352,7 +356,7 @@ def make_loader(
         valid_dataset,
         batch_size=config['VALID_BATCH_SIZE'],
         sampler=valid_sampler,
-        num_workers=optimal_num_of_loader_workers(),
+        num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
         drop_last=False
     )
