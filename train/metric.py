@@ -130,6 +130,8 @@ class AccumulateMeter(object):
         self.contexts.extend(contexts)
 
     def get_metrics(self):
+        if len(self.contexts) == 0:
+            return -1, False, -1
 
         try:
             res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
