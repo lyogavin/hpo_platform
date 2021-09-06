@@ -161,7 +161,7 @@ def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
 
     for metric in metrics:
         if metric == 'loss':
-            res = loss_fn((torch.tensor(pred_starts), torch.tensor(pred_ends)), (torch.tensor(target_starts), torch.tensor(target_ends)))
+            res = loss_fn((torch.tensor(pred_starts), torch.tensor(pred_ends)), (torch.tensor(target_starts), torch.tensor(target_ends))).item()
         elif metric == 'jaccard':
             #for context, pred_start, pred_end, target_start, target_end in \
             #    zip(contexts, pred_starts, pred_ends, target_starts, target_ends):
@@ -173,3 +173,6 @@ def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
 
         res_dict[metric] = res
     return res_dict
+
+def pprint_metrics(res):
+    return {k:f"{v:.4f}" for k,v in res.items()}
