@@ -223,7 +223,6 @@ def get_data_kfold_split(config):
 
     if config['TEST_RUN']:
         train = train.sample(n=100)
-        test = test.sample(n=100)
         external_train = external_train.sample(n=100)
         logging.info(f"!!! test run !!! n=100")
 
