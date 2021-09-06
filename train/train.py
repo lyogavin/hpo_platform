@@ -491,7 +491,7 @@ def run(config, import_file_path=None):
 
 
             logging.info(f'========== epoch : {epoch+1}==========')
-            best_metric = train_fn(train_loader, valid_loader,fold,
+            rec, best_metric = train_fn(train_loader, valid_loader,fold,
                 model,
                 optimizer,
                 scheduler,
