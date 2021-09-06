@@ -231,16 +231,15 @@ def get_data_kfold_split(config):
                       shuffle=True)
 
     if config['USE_TRAIN_AS_TEST']:
-        original_train = train
-        test = train
-        train = external_train
-        train = train.append(test)
+        external_len = len(external_train)
+        train_len = len(train)
+        train = external_train.append(train)
 
         if config['TEST_RUN']:
             train = train.sample(n=100)
             logging.info(f"!!! test run !!! n=100")
-        train_idx = train[:len(external_train)].index.values
-        test_idx = train[len(external_train):].index.values
+        train_idx = train.loc[:external_len].index.values
+        test_idx = train.loc[external_len:].index.values
         split_output = [(train_idx, test_idx)]
     else:
 
@@ -275,12 +274,6 @@ def make_loader(
         data, split_output,
         tokenizer, fold
 ):
-
-
-
-
-
-
     train_set, valid_set = data.loc[split_output[fold][0]], data.loc[split_output[fold][1]]
 
 
