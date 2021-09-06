@@ -221,6 +221,12 @@ def get_data_kfold_split(config):
     external_xquad = pd.read_csv(f'{input_path}mlqa-hindi-processed/xquad.csv')
     external_train = pd.concat([external_mlqa, external_xquad])
 
+    if config['TEST_RUN']:
+        train = train.sample(n=100)
+        test = test.sample(n=100)
+        external_train = external_train.sample(n=100)
+        logging.info(f"!!! test run !!! n=100")
+
     if config['STRATEFIED']:
         kfold = StratifiedKFold(n_splits=config['FOLDS'],
                                 shuffle=True,
@@ -235,9 +241,6 @@ def get_data_kfold_split(config):
         train_len = len(train)
         train = external_train.append(train).reset_index(drop=True)
 
-        if config['TEST_RUN']:
-            train = train.sample(n=100)
-            logging.info(f"!!! test run !!! n=100")
         train_idx = train.iloc[:external_len].index.values
         test_idx = train.iloc[external_len:].index.values
         split_output = [(train_idx, test_idx)]
@@ -245,11 +248,6 @@ def get_data_kfold_split(config):
 
 
         if config['STRATEFIED']:
-
-            if config['TEST_RUN']:
-                train = train.sample(n=100)
-                logging.info(f"!!! test run !!! n=100")
-
             bins = get_stratified_col(train)
 
             split_output = kfold.split(X=train,y=bins)

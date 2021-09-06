@@ -287,7 +287,7 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
 
 
 def eval(data_loader, model, device, config):
-    logging.info(f"eval, data: {len(data_loader)}")
+    #logging.info(f"eval, data: {len(data_loader)}")
     model.eval()
     with torch.no_grad():
         meter = AccumulateMeter()
