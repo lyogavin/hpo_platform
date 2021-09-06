@@ -116,6 +116,7 @@ class AccumulateMeter(object):
 
     def reset(self, reset_best=False):
         self.contexts = []
+        self.offset_mappings = []
 
         self.pred_starts = []
         self.pred_ends = []
@@ -126,19 +127,21 @@ class AccumulateMeter(object):
             self.best = None
             self.last_best = None
 
-    def update(self, contexts, pred_starts, pred_ends, target_starts, target_ends):
+    def update(self, contexts, offset_mappings, pred_starts, pred_ends, target_starts, target_ends):
         self.pred_starts.extend(pred_starts.tolist())
+
         self.pred_ends.extend(pred_ends.tolist())
         self.target_starts.extend(target_starts.tolist())
         self.target_ends.extend(target_ends.tolist())
         self.contexts.extend(contexts)
+        self.offset_mappings.extend(offset_mappings)
 
     def get_metrics(self):
         if len(self.contexts) == 0:
             return {}, False, self.last_best
 
         try:
-            res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
+            res = get_metrics(self.contexts, self.offset_mappings, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
         except Exception as e:
             logging.info(f"exception getting metric for: {(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)}")
             raise e
@@ -157,7 +160,7 @@ def jaccard(str1, str2):
         return 0
     return float(len(c)) / (len(a) + len(b) - len(c))
 
-def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
+def get_metrics(contexts,offset_mappings, pred_starts, pred_ends, target_starts, target_ends):
     metrics = ['loss', 'jaccard']
 
     res_dict = {}
@@ -169,9 +172,10 @@ def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
             #for context, pred_start, pred_end, target_start, target_end in \
             #    zip(contexts, pred_starts, pred_ends, target_starts, target_ends):
             #    logging.info(f"{pred_start}:{pred_end}, {target_start}:{target_end}")
-            res = [jaccard(context[np.argmax(pred_start):np.argmax(pred_end)], context[target_start:target_end])
-                   for context, pred_start, pred_end, target_start, target_end in
-                   zip(contexts, pred_starts, pred_ends, target_starts, target_ends)]
+            res = [jaccard(context[offset_mapping[np.argmax(pred_start)][0]:offset_mapping[np.argmax(pred_end)][1]+1],
+                           context[offset_mapping[target_start][0]:offset_mapping[target_end][1]+1])
+                   for context, offset_mapping, pred_start, pred_end, target_start, target_end in
+                   zip(contexts, offset_mappings, pred_starts, pred_ends, target_starts, target_ends)]
             res = np.array(res).mean()
 
         res_dict[metric] = res

@@ -234,8 +234,8 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
         last_lr = scheduler.get_last_lr()
 
         # update meters
-        train_steps_meter.update(d['context'], outputs_start, outputs_end, targets_start, targets_end)
-        train_total_meter.update(d['context'], outputs_start, outputs_end, targets_start, targets_end)
+        train_steps_meter.update(d['context'], d['offset_mapping'], outputs_start, outputs_end, targets_start, targets_end)
+        train_total_meter.update(d['context'], d['offset_mapping'], outputs_start, outputs_end, targets_start, targets_end)
 
         if step >= (last_train_eval_step + train_eval_period) or idx == (len(data_loader) -1):
             # Evaluate the model on train_loader.
@@ -311,7 +311,7 @@ def eval(data_loader, model, device, config, previous_best):
             
             outputs_start, outputs_end = outputs
 
-            meter.update(d['context'], outputs_start, outputs_end, targets_start, targets_end)
+            meter.update(d['context'], d['offset_mapping'], outputs_start, outputs_end, targets_start, targets_end)
 
         #sp_cor = 0 #spearmanr(fin_targets, fin_outputs)
         
