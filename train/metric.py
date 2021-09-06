@@ -130,7 +130,12 @@ class AccumulateMeter(object):
         self.contexts.extend(contexts)
 
     def get_metrics(self):
-        res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
+
+        try:
+            res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
+        except Exception as e:
+            logging.info(f"exception getting metric for: {(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)}")
+            raise e
         is_best = False
         if self.best is None or res['jaccard'] > self.best:
             last_best = self.best
