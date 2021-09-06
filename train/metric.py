@@ -132,7 +132,7 @@ class AccumulateMeter(object):
 
     def get_metrics(self):
         if len(self.contexts) == 0:
-            return self.best, False, self.last_best
+            return {}, False, self.last_best
 
         try:
             res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
