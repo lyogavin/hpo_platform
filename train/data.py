@@ -209,7 +209,8 @@ class DatasetRetriever(Dataset):
 
 
 def get_stratified_col(train):
-    return train['context'].apply(lambda x: len(x))
+    #return train['context'].apply(lambda x: len(x))
+    return train['language']
 
 def get_data_kfold_split(config):
 
@@ -245,13 +246,20 @@ def get_data_kfold_split(config):
         split_output = [(train_idx, test_idx)]
     else:
 
+        external_len = len(external_train)
+        train_len = len(train)
+        appended_train = train.append(external_train).reset_index(drop=True)
+
 
         if config['STRATEFIED']:
-            bins = get_stratified_col(train)
+            bins = get_stratified_col(appended_train[:train_len])
 
             split_output = kfold.split(X=train,y=bins)
         else:
-            split_output = kfold.split(train)
+            split_output = kfold.split(appended_train[:train_len])
+
+        split_output = [(list(x[0]) + appended_train[train_len:].index.tolist(),x[1]) for x in split_output]
+        train = appended_train
 
 
     #logging.info(f"data to return: {train}- {split_output}")
@@ -442,4 +450,4 @@ class StratifiedBatchSampler:
 # test...
 if __name__ == "__main__":
     from utils.config import TrainingConfig
-    print(get_data_kfold_split(TrainingConfig({'DATA_ROOT_PATH':'../../chaii/input/', 'USE_TRAIN_AS_TEST': True})))
+    print(get_data_kfold_split(TrainingConfig({'DATA_ROOT_PATH':'../../chaii/input/', 'USE_TRAIN_AS_TEST': False})))

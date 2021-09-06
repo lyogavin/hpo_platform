@@ -32,7 +32,7 @@ default_train_config = {
     'FREEZE_EMBED':False,
 
     #data
-    'STRATEFIED':False,
+    'STRATEFIED':True,
     'USE_TRAIN_AS_TEST':False,
     'ADD_AUGMENT':None,
     'AUGMENT_SKIP_TRAINING':False,
