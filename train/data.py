@@ -254,7 +254,7 @@ def get_data_kfold_split(config):
             split_output = kfold.split(train)
 
 
-    logging.info(f"data to return: {train}- {split_output}")
+    #logging.info(f"data to return: {train}- {split_output}")
     return train, split_output
 
 

@@ -303,9 +303,9 @@ def eval(data_loader, model, device, config):
             
             if config['AUTO_SCALER']:
                 with torch.cuda.amp.autocast():
-                    outputs, _ = model(**data)
+                    outputs = model(**data)
             else:
-                outputs, _ = model(**data)
+                outputs = model(**data)
             
             outputs_start, outputs_end = outputs
 
