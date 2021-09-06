@@ -52,6 +52,8 @@ class ExpRecord:
         os.makedirs(self.config['OUTPUT_ROOT_PATH'] + 'exp_records/', exist_ok=True)
 
         pickle_file = self.config['OUTPUT_ROOT_PATH'] + 'exp_records/' + f'exp_rec_{self.saving_ts}.pickle'
+        if self.config['TEST_RUN']:
+            pickle_file = pickle_file + '.test'
         with open(pickle_file, 'wb') as handle:
             pickle.dump(self, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
