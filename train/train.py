@@ -243,7 +243,7 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
             last_train_eval_step = step
             train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics()
             train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics()
-            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr):.8f}-{max(last_lr):.8f}\n'
+            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)}\n'
                          f'Train Loss: {loss.item():.4f} Train Steps metrics(new best:{train_steps_is_best}) : {pprint_metrics(train_steps_metrics)}\n'
                          f'Train Total metrics(new best:{train_total_is_best}) : {pprint_metrics(train_total_metrics)}')
             train_steps_meter.reset()
@@ -256,7 +256,7 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
             last_eval_step = step
 
             inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config, best_metric)
-            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr):.8f}-{max(last_lr):.8f}\n'
+            logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)}\n'
                          f'Train Loss: {loss.item():.4f} Val metrics(new best:{is_best}) : {pprint_metrics(inter_eval_metrics)}')
                 
             if is_best:
