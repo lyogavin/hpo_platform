@@ -112,6 +112,7 @@ class AccumulateMeter(object):
     def __init__(self, previous_best=None):
         self.reset()
         self.best = previous_best
+        self.last_best = None
 
     def reset(self, reset_best=False):
         self.contexts = []
