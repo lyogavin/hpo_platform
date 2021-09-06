@@ -352,7 +352,7 @@ def make_loader(
         pin_memory=True,
         drop_last=False
     )
-
+    logging.info(f"loaders created, num steps: train-{len(train_dataloader)}, val-{len(valid_dataloader)}")
     return train_dataloader, valid_dataloader
 
 
