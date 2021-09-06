@@ -35,6 +35,7 @@ class ExpRecord:
     def get_mean_loss(self):
         if len(self.fold_best_train_losses.values()) == 0:
             return 0.
+        print(self.fold_best_train_losses)
         mean_loss = np.array(list(self.fold_best_train_losses.values())).mean()
         return mean_loss
 
