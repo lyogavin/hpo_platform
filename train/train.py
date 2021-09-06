@@ -503,7 +503,7 @@ def run(config, import_file_path=None):
         elp_fold = end_time - start_time
         logging.info(f'===== Fold Time: {elp_fold} =====')
 
-        logging.info(exp_record)
+        logging.info(f"fold record: {exp_record}")
 
         # cleanup after fold is done
         logging.info(f'cleanup after fold is done')

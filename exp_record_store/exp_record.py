@@ -43,7 +43,9 @@ class ExpRecord:
         return f"saving_ts: {self.saving_ts}, saving_dir: {self.saving_dir}, logging_file_path: {self.logging_file_path} " \
             f"git_head_id: {self.git_head_id} mean_jaccard: {self.get_mean_jaccard():.4f} mean_loss: {self.get_mean_loss():.4f}\n" \
             f"jaccards for folds: {self.fold_best_jaccards}\n" \
-            f"losses for folds: {self.fold_best_train_losses}" \
+            f"losses for folds: {self.fold_best_train_losses}"
+    def __repr__(self):
+        return self.__str__()
 
     def persist(self):
         #ensure dir...
