@@ -167,10 +167,10 @@ def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fo
 def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, device, config,
              exp_record,
              original_model, tokenizer,
-             saving_ts, saving_dir, epoch,best_loss_sum,previous_best_loss
+             saving_ts, saving_dir, epoch,best_loss_sum,previous_best
             ):  
     
-    best_val_rmse = previous_best_loss
+    best_metric = previous_best
     best_outputs_targets = (None, None)
     step = 0
     last_eval_step = 0
@@ -255,13 +255,15 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
             num_steps = step - last_eval_step
             last_eval_step = step
 
-            inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config)
+            inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config, best_metric)
             logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr):.8f}-{max(last_lr):.8f}\n'
                          f'Train Loss: {loss.item():.4f} Val metrics(new best:{is_best}) : {pprint_metrics(inter_eval_metrics)}')
                 
             if is_best:
                 logging.info(f'!!new best Loss!!')
                 new_best = inter_eval_metrics['jaccard']
+                assert best_metric < new_best
+                best_metric = new_best
                 logging.info(f'{blu} Loss decreased from {last_best} -> {new_best}{blk}\n')
 
                 # update record
@@ -280,17 +282,17 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
         if GRAD_DESCD_STEP:
             step +=1
     
-    return exp_record
+    return exp_record, best_metric
 
 
 # In[22]:
 
 
-def eval(data_loader, model, device, config):
+def eval(data_loader, model, device, config, previous_best):
     #logging.info(f"eval, data: {len(data_loader)}")
     model.eval()
     with torch.no_grad():
-        meter = AccumulateMeter()
+        meter = AccumulateMeter(previous_best = previous_best)
 
         for idx,d in enumerate(data_loader):
 
@@ -477,7 +479,7 @@ def run(config, import_file_path=None):
         optimizer = make_optimizer(original_model, config)
         scheduler = make_scheduler(optimizer, train_loader, config)
             
-        best_loss = 99999
+        best_metric = 0
         
 
 
@@ -489,7 +491,7 @@ def run(config, import_file_path=None):
 
 
             logging.info(f'========== epoch : {epoch+1}==========')
-            train_fn(train_loader, valid_loader,fold,
+            best_metric = train_fn(train_loader, valid_loader,fold,
                 model,
                 optimizer,
                 scheduler,
@@ -497,7 +499,7 @@ def run(config, import_file_path=None):
                 config,
                 exp_record,
                 original_model, tokenizer,
-                saving_ts, saving_dir, epoch, best_loss_sum, previous_best_loss=best_loss)
+                saving_ts, saving_dir, epoch, best_loss_sum, previous_best=best_metric)
         
         end_time = time.time()
         elp_fold = end_time - start_time

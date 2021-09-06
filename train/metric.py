@@ -109,10 +109,11 @@ from train.loss import loss_fn
 
 
 class AccumulateMeter(object):
-    def __init__(self):
+    def __init__(self, previous_best=None):
         self.reset()
+        self.best = previous_best
 
-    def reset(self):
+    def reset(self, reset_best=False):
         self.contexts = []
 
         self.pred_starts = []
@@ -120,8 +121,9 @@ class AccumulateMeter(object):
         self.target_starts = []
         self.target_ends = []
         self.metrics = {}
-        self.best = None
-        self.last_best = None
+        if reset_best:
+            self.best = None
+            self.last_best = None
 
     def update(self, contexts, pred_starts, pred_ends, target_starts, target_ends):
         self.pred_starts.extend(pred_starts.tolist())
