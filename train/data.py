@@ -256,6 +256,8 @@ def get_data_kfold_split(config):
         else:
             split_output = kfold.split(train)
 
+
+    logging.info(f"data to return: {train}- {split_output}")
     return train, split_output
 
 
