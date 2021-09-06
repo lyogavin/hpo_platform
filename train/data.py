@@ -233,7 +233,7 @@ def get_data_kfold_split(config):
     if config['USE_TRAIN_AS_TEST']:
         external_len = len(external_train)
         train_len = len(train)
-        train = external_train.append(train)
+        train = external_train.append(train).reset_index(drop=True)
 
         if config['TEST_RUN']:
             train = train.sample(n=100)
@@ -439,3 +439,8 @@ class StratifiedBatchSampler:
     def __len__(self):
         return len(self.y)
 
+
+# test...
+if __name__ == "__main__":
+    from utils.config import TrainingConfig
+    print(get_data_kfold_split(TrainingConfig({'DATA_ROOT_PATH':'../../chaii/input/', 'USE_TRAIN_AS_TEST': True})))
