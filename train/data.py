@@ -238,8 +238,8 @@ def get_data_kfold_split(config):
         if config['TEST_RUN']:
             train = train.sample(n=100)
             logging.info(f"!!! test run !!! n=100")
-        train_idx = train.loc[:external_len].index.values
-        test_idx = train.loc[external_len:].index.values
+        train_idx = train.iloc[:external_len].index.values
+        test_idx = train.iloc[external_len:].index.values
         split_output = [(train_idx, test_idx)]
     else:
 
