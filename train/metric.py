@@ -121,6 +121,7 @@ class AccumulateMeter(object):
         self.target_ends = []
         self.metrics = {}
         self.best = None
+        self.last_best = None
 
     def update(self, contexts, pred_starts, pred_ends, target_starts, target_ends):
         self.pred_starts.extend(pred_starts.tolist())
@@ -131,7 +132,7 @@ class AccumulateMeter(object):
 
     def get_metrics(self):
         if len(self.contexts) == 0:
-            return -1, False, -1
+            return self.best, False, self.last_best
 
         try:
             res = get_metrics(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
@@ -140,10 +141,10 @@ class AccumulateMeter(object):
             raise e
         is_best = False
         if self.best is None or res['jaccard'] > self.best:
-            last_best = self.best
+            self.last_best = self.best
             self.best = res['jaccard']
             is_best = True
-        return res, is_best, last_best
+        return res, is_best, self.last_best
 
 def jaccard(str1, str2):
     a = set(str1.lower().split())
