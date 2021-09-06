@@ -142,6 +142,8 @@ def jaccard(str1, str2):
     a = set(str1.lower().split())
     b = set(str2.lower().split())
     c = a.intersection(b)
+    if len(a) + len(b) - len(c) == 0:
+        return 0
     return float(len(c)) / (len(a) + len(b) - len(c))
 
 def get_metrics(contexts, pred_starts, pred_ends, target_starts, target_ends):
