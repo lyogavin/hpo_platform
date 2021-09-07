@@ -232,14 +232,15 @@ class DatasetRetriever(Dataset):
         return {
             'input_ids': torch.tensor(feature['input_ids'], dtype=torch.long),
             'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
-            'offset_mapping': feature['offset_mapping'],
-            'sequence_ids': feature['sequence_ids'],
+            'offset_mapping': torch.tensor(feature['offset_mapping'], dtype=torch.long),
+            'sequence_ids': torch.tensor(feature['sequence_ids'], dtype=torch.long),
             'start_position': torch.tensor(feature['start_position'], dtype=torch.long),
             'end_position': torch.tensor(feature['end_position'], dtype=torch.long),
             'id': feature['example_id'],
             'context': feature['context'],
             'question': feature['question'],
-            'answer_text': feature['answer_text']
+            'answer_text': feature['answer_text'],
+            #'features_index':item
         }
 
 
@@ -536,6 +537,7 @@ def postprocess_qa_predictions(tokenizer, features,
 
             sequence_ids = features[feature_index]["sequence_ids"]
             context_index = 1
+            logging.debug(f"{example_id} offset_mapping: {features[feature_index]['offset_mapping']}")
 
             features[feature_index]["offset_mapping"] = [
                 (o if sequence_ids[k] == context_index else None)
@@ -551,6 +553,8 @@ def postprocess_qa_predictions(tokenizer, features,
             end_indexes = np.argsort(end_logits)[-1: -n_best_size - 1: -1].tolist()
             for start_index in start_indexes:
                 for end_index in end_indexes:
+                    logging.debug(f"for {example_id} considering: {start_index} - {end_index}")
+                    logging.debug(f"offset_mapping: {offset_mapping}")
                     if (
                             start_index >= len(offset_mapping)
                             or end_index >= len(offset_mapping)
@@ -561,7 +565,6 @@ def postprocess_qa_predictions(tokenizer, features,
                     # Don't consider answers with a length that is either < 0 or > max_answer_length.
                     if end_index < start_index or end_index - start_index + 1 > max_answer_length:
                         continue
-
                     start_char = offset_mapping[start_index][0]
                     end_char = offset_mapping[end_index][1]
                     valid_answers.append(
@@ -570,6 +573,7 @@ def postprocess_qa_predictions(tokenizer, features,
                             "text": context[start_char: end_char]
                         }
                     )
+                    logging.debug(f"found: {context[start_char: end_char]}")
 
         if len(valid_answers) > 0:
             best_answer = sorted(valid_answers, key=lambda x: x["score"], reverse=True)[0]

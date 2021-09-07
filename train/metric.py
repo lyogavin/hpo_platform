@@ -136,6 +136,7 @@ class AccumulateMeter(object):
 
         #print(f"adding: {features.keys()}")
         to_extend = []
+        #print(f"offset_mapping: {features['offset_mapping']}")
         for i in range(len(features['context'])):
             item = {}
             for k in features.keys():
@@ -181,10 +182,15 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
             #for context, pred_start, pred_end, target_start, target_end in \
             #    zip(contexts, pred_starts, pred_ends, target_starts, target_ends):
             #    logging.info(f"{pred_start}:{pred_end}, {target_start}:{target_end}")
+            logging.debug(f"post process for {[x['start_position'] for x in features]}")
+            logging.debug(f"post process for {[x['end_position'] for x in features]}")
+            logging.debug(f"post process for {pred_starts}-{pred_ends}")
             text_predictions = postprocess_qa_predictions(tokenzier, features, pred_starts, pred_ends)
+            logging.debug(f"text predictions: {text_predictions}")
             example_id_to_answers = {}
             for feat in features:
                 example_id_to_answers[feat['id']] = feat['answer_text']
+            logging.debug(f"text answers: {example_id_to_answers}")
 
             res = [jaccard(pred_text,
                            example_id_to_answers[example_id])
@@ -196,3 +202,5 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
 
 def pprint_metrics(res):
     return {k:f"{v:.4f}" for k,v in res.items()}
+
+
