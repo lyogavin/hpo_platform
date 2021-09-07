@@ -137,7 +137,7 @@ class AccumulateMeter(object):
         #print(f"adding: {features.keys()}")
         to_extend = [{k: features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i]} for k in features.keys() for i in range(len(features['context']))]
         for x in to_extend:
-            assert 'id' in x, f"{x} has to have id field"
+            assert 'id' in x, f"{x.keys()} has to have id field"
         self.features.extend(to_extend)
 
     def get_metrics(self, tokenzier):
