@@ -234,6 +234,8 @@ class DatasetRetriever(Dataset):
             'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
             'offset_mapping': feature['offset_mapping'],
             'sequence_ids': feature['sequence_ids'],
+            'start_position': torch.tensor(feature['start_position'], dtype=torch.long),
+            'end_position': torch.tensor(feature['end_position'], dtype=torch.long),
             'id': feature['example_id'],
             'context': feature['context'],
             'question': feature['question']
