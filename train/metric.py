@@ -134,8 +134,8 @@ class AccumulateMeter(object):
         self.target_starts.extend(target_starts.tolist())
         self.target_ends.extend(target_ends.tolist())
 
-        print(f"adding: {features.keys()}")
-        self.features.extend([{k: features[k][i]} for k in features.keys() for i in range(len(features['context']))])
+        #print(f"adding: {features.keys()}")
+        self.features.extend([{k: features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i]} for k in features.keys() for i in range(len(features['context']))])
 
     def get_metrics(self, tokenzier):
         if len(self.features) == 0:
