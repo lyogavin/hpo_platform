@@ -132,7 +132,7 @@ def prepare_train_features(config, example, tokenizer):
         feature = {}
         feature['context'] = example['context']
         feature['question'] = example['question']
-        feature['answer_text'] = example["answer_start"]
+        feature['answer_text'] = example["answer_text"]
 
         input_ids = tokenized_example["input_ids"][i]
         attention_mask = tokenized_example["attention_mask"][i]
@@ -238,7 +238,8 @@ class DatasetRetriever(Dataset):
             'end_position': torch.tensor(feature['end_position'], dtype=torch.long),
             'id': feature['example_id'],
             'context': feature['context'],
-            'question': feature['question']
+            'question': feature['question'],
+            'answer_text': feature['answer_text']
         }
 
 
