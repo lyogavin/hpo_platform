@@ -313,8 +313,8 @@ def train_fn(data_loader, valid_loader,
             # Evaluate the model on train_loader.
             num_steps = step - last_eval_step
             last_train_eval_step = step
-            train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics()
-            train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics()
+            train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer)
+            train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer)
             logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)}\n'
                          f'Train Loss: {loss.item():.4f} Train Steps metrics(new best:{train_steps_is_best}) : {pprint_metrics(train_steps_metrics)}\n'
                          f'Train Total metrics(new best:{train_total_is_best}) : {pprint_metrics(train_total_metrics)}')
@@ -327,7 +327,7 @@ def train_fn(data_loader, valid_loader,
             num_steps = step - last_eval_step
             last_eval_step = step
 
-            inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config, best_metric)
+            inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config, best_metric, tokenizer)
             logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)}\n'
                          f'Train Loss: {loss.item():.4f} Val metrics(new best:{is_best}) : {pprint_metrics(inter_eval_metrics)}')
                 
@@ -360,7 +360,7 @@ def train_fn(data_loader, valid_loader,
 # In[22]:
 
 
-def eval(data_loader, model, device, config, previous_best):
+def eval(data_loader, model, device, config, previous_best, tokenizer):
     #logging.info(f"eval, data: {len(data_loader)}")
     model.eval()
     with torch.no_grad():
@@ -391,7 +391,7 @@ def eval(data_loader, model, device, config, previous_best):
         #rmse, low, high = bootstrap_rmse(fin_outputs, fin_targets, low_high=True)
 
         # get metrics for val:
-        metrics, is_best, last_best = meter.get_metrics()
+        metrics, is_best, last_best = meter.get_metrics(tokenizer)
         
     return metrics, is_best, last_best
 
