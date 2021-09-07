@@ -1,4 +1,5 @@
 import pprint
+import json
 
 default_runtime_config = {
     'DEBUG_PRINT':False,
@@ -10,6 +11,7 @@ default_runtime_config = {
     'VALID_BATCH_SIZE':16,
     'DATA_ROOT_PATH':'../chaii/input/',
     'OUTPUT_ROOT_PATH':'../chaii/output/',
+    'PRED_ROOT_PATH':'../chaii/output/',
     'FORCE_NUM_LOADER_WORKER':None
 }
 default_train_config = {
@@ -77,6 +79,7 @@ class TrainingConfig:
     def __getitem__(self, key):
         assert key in default_train_config or key in default_runtime_config, f"must define default value for key: {key}"
         return self.config[key]
+
 
 
     def __str__(self):

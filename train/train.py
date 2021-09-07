@@ -164,7 +164,79 @@ def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fo
 
     logging.info(f"saved in {saving_dir}/model_{fold}")
 
-def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, device, config,
+
+def postprocess_qa_predictions(examples, features, raw_predictions, n_best_size=20, max_answer_length=30):
+    all_start_logits, all_end_logits = raw_predictions
+
+    example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
+    features_per_example = collections.defaultdict(list)
+    for i, feature in enumerate(features):
+        features_per_example[example_id_to_index[feature["example_id"]]].append(i)
+
+    predictions = collections.OrderedDict()
+
+    print(f"Post-processing {len(examples)} example predictions split into {len(features)} features.")
+
+    for example_index, example in examples.iterrows():
+        feature_indices = features_per_example[example_index]
+
+        min_null_score = None
+        valid_answers = []
+
+        context = example["context"]
+        for feature_index in feature_indices:
+            start_logits = all_start_logits[feature_index]
+            end_logits = all_end_logits[feature_index]
+
+            sequence_ids = features[feature_index]["sequence_ids"]
+            context_index = 1
+
+            features[feature_index]["offset_mapping"] = [
+                (o if sequence_ids[k] == context_index else None)
+                for k, o in enumerate(features[feature_index]["offset_mapping"])
+            ]
+            offset_mapping = features[feature_index]["offset_mapping"]
+            cls_index = features[feature_index]["input_ids"].index(tokenizer.cls_token_id)
+            feature_null_score = start_logits[cls_index] + end_logits[cls_index]
+            if min_null_score is None or min_null_score < feature_null_score:
+                min_null_score = feature_null_score
+
+            start_indexes = np.argsort(start_logits)[-1: -n_best_size - 1: -1].tolist()
+            end_indexes = np.argsort(end_logits)[-1: -n_best_size - 1: -1].tolist()
+            for start_index in start_indexes:
+                for end_index in end_indexes:
+                    if (
+                            start_index >= len(offset_mapping)
+                            or end_index >= len(offset_mapping)
+                            or offset_mapping[start_index] is None
+                            or offset_mapping[end_index] is None
+                    ):
+                        continue
+                    # Don't consider answers with a length that is either < 0 or > max_answer_length.
+                    if end_index < start_index or end_index - start_index + 1 > max_answer_length:
+                        continue
+
+                    start_char = offset_mapping[start_index][0]
+                    end_char = offset_mapping[end_index][1]
+                    valid_answers.append(
+                        {
+                            "score": start_logits[start_index] + end_logits[end_index],
+                            "text": context[start_char: end_char]
+                        }
+                    )
+
+        if len(valid_answers) > 0:
+            best_answer = sorted(valid_answers, key=lambda x: x["score"], reverse=True)[0]
+        else:
+            best_answer = {"text": "", "score": 0.0}
+
+        predictions[example["id"]] = best_answer["text"]
+
+    return predictions
+
+def train_fn(data_loader, valid_loader,
+             train_features, valid_features,
+             fold, model, optimizer, scheduler, device, config,
              exp_record,
              original_model, tokenizer,
              saving_ts, saving_dir, epoch,best_loss_sum,previous_best
@@ -234,8 +306,8 @@ def train_fn(data_loader, valid_loader, fold, model, optimizer, scheduler, devic
         last_lr = scheduler.get_last_lr()
 
         # update meters
-        train_steps_meter.update(d['context'], d['offset_mapping'], outputs_start, outputs_end, targets_start, targets_end)
-        train_total_meter.update(d['context'], d['offset_mapping'], outputs_start, outputs_end, targets_start, targets_end)
+        train_steps_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
+        train_total_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
 
         if step >= (last_train_eval_step + train_eval_period) or idx == (len(data_loader) -1):
             # Evaluate the model on train_loader.
@@ -311,7 +383,7 @@ def eval(data_loader, model, device, config, previous_best):
             
             outputs_start, outputs_end = outputs
 
-            meter.update(d['context'], d['offset_mapping'], outputs_start, outputs_end, targets_start, targets_end)
+            meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
 
         #sp_cor = 0 #spearmanr(fin_targets, fin_outputs)
         
@@ -327,50 +399,47 @@ def eval(data_loader, model, device, config, previous_best):
 # for debug...
 printed_debug_info = True
 
-def infer(data_loader, model, device, config, return_embed = False, use_tqdm=True):
+def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     global printed_debug_info
     printed_debug_info = True
     model.eval()
+    to_ret = {}
     with torch.no_grad():
-        fin_targets = []
-        fin_outputs = []
-        if return_embed:
-            fin_outputs_embed = []
+        outputs_starts = []
+        outputs_ends = []
+
         to_for = enumerate(data_loader)
         if use_tqdm:
             to_for = tqdm(to_for, total = len(data_loader))
-        for idx, data in to_for:
-            data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in data.items()}
-            
+        for idx, d in to_for:
+
+
+            model_input_keys = ['input_ids', 'attention_mask']
+            data = {key: val.reshape(val.shape[0], -1).to(device) for key, val in d.items() if key in model_input_keys}
+
+
             
             if not printed_debug_info:
                 logging.info(f"input to model:{data}")
                 logging.info(f"input to model shape:{data['attention_mask'].shape}")
                 
-            outputs, embeds = model(**data)
+            outputs_start, outputs_end = model(**data)
             if not printed_debug_info:
-                logging.info(f"output to model:{outputs}")
-                logging.info(f"output to model shape:{outputs.shape}")
+                logging.info(f"output to model:{outputs_start}")
+                logging.info(f"output to model shape:{outputs_start.shape}")
+                logging.info(f"output to model:{outputs_end}")
+                logging.info(f"output to model shape:{outputs_end.shape}")
                 
                 printed_debug_info = True
-            outputs = outputs.squeeze(-1)
-            
-            #outputs = outputs["logits"].squeeze(-1)
-            
-            if config['LOSS_TYPE'] == 'multi-class':
-                outputs = torch.argmax(outputs, dim=-1)
+            outputs_start = outputs_start.squeeze(-1)
+            outputs_end = outputs_end.squeeze(-1)
 
-#             targets = data['targets']
-
-#             outputs = model(data['input_ids'], data['attention_mask'])
             
-            fin_outputs.extend(outputs.detach().cpu().numpy().tolist())
-            if return_embed:
-                fin_outputs_embed.extend(embeds.detach().cpu().numpy())
-    if return_embed:
-        return fin_outputs, fin_outputs_embed 
-    else:
-        return fin_outputs
+            outputs_starts.extend(outputs_start.detach().cpu().tolist())
+            outputs_ends.extend(outputs_end.detach().cpu().tolist())
+
+
+    return outputs_starts, outputs_ends
 
 
 # In[ ]:
@@ -436,7 +505,7 @@ def run(config, import_file_path=None):
 
     for fold, (train_idx,valid_idx) in enumerate(tqdm(split_output, total=len(split_output))):
 
-        train_loader, valid_loader = make_loader(config, data, split_output, tokenizer, fold)
+        train_loader, valid_loader, train_features, valid_features = make_loader(config, data, split_output, tokenizer, fold)
             
         if config['RESEED_EVERY_FOLD']:
             seed_everything(config['SEED'] + fold)
@@ -491,15 +560,18 @@ def run(config, import_file_path=None):
 
 
             logging.info(f'========== epoch : {epoch+1}==========')
-            rec, best_metric = train_fn(train_loader, valid_loader,fold,
-                model,
-                optimizer,
-                scheduler,
-                device,
-                config,
-                exp_record,
-                original_model, tokenizer,
-                saving_ts, saving_dir, epoch, best_loss_sum, previous_best=best_metric)
+            rec, best_metric = train_fn(train_loader, valid_loader,
+                                        train_features, valid_features,
+                                        fold,
+                                        model,
+                                        optimizer,
+                                        scheduler,
+                                        device,
+                                        config,
+                                        exp_record,
+                                        original_model, tokenizer,
+                                        saving_ts, saving_dir, epoch, best_loss_sum,
+                                        previous_best=best_metric)
         
         end_time = time.time()
         elp_fold = end_time - start_time
@@ -523,32 +595,24 @@ def run(config, import_file_path=None):
 
     
 def pred_df(df, config, upload_name='pretrained-model-1621892031'):
-    pretrain_base_path = f'crp/data/{upload_name}/' if 'gavin_li' in cwd else f'../input/{upload_name}/'
+    root_path = config['PRED_ROOT_PATH']
+    pretrain_base_path = f'{root_path}/{upload_name}/'
     
     if 'SEED' in config:
         seed_everything(config['SEED'])
     else:
         seed_everything(43)
     
-    #print(pretrain_base_path)
 
     import json
-    
-    # assert the save version...
-    
-    #with open(f"{pretrain_base_path}/model_0/training_config.json", 'r') as f:
-    #    conf = json.load(f)
-    #    if 'saving_ts' in conf:
-    #        assert conf['saving_ts'] == 1622060846, 'saving_ts should match with the saved one'
-        
-        
+
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
     import os
 
     from pathlib import Path
-    from transformers.file_utils import WEIGHTS_NAME
     pretrain_paths = []
 
     pathlist = Path(pretrain_base_path).glob('**/*')
@@ -566,97 +630,35 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
 
     # fix GPT2 save pretrain issue...
     logging.info(f"loading tokenizer for {config['TOKENIZER']}")
-    if config['TOKENIZER'] == 'microsoft/deberta-base':
-        logging.info(f"fix GPT2 save pretrain issue by direct load from huggingface registry...")
-        if os.path.exists("../input/deberta-base-uncased-tokenizer"):
-            logging.info(f"loading from ../input/deberta-base-uncased-tokenizer")
-            tokenizer = DebertaTokenizer.from_pretrained(f"../input/deberta-base-uncased-tokenizer")
-        elif os.path.exists(f"{str(pretrain_paths[0])}/tokenizer/"):
-            logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
-            tokenizer = DebertaTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
-        else:
-            logging.info(f"loading from {pretrain_paths[0]}")
-            tokenizer = DebertaTokenizer.from_pretrained(f"{str(pretrain_paths[0])}")
-    else:
-        if os.path.exists(f"{str(pretrain_paths[0])}/tokenizer/"):
-            if config['TOKENIZER'] in ["deepset/roberta-base-squad2","chkla/roberta-argument","roberta-base", "deepset/roberta-large-squad2"]:
-                tmp_ts = int(time.time())
-                os.system(f'mkdir tmp_{tmp_ts}')
-                tokenizer_dir = f"{str(pretrain_paths[0])}/tokenizer/"
-                from_dir = f"{str(pretrain_paths[0])}/"
-                os.system(f'cp {tokenizer_dir}/* tmp_{tmp_ts}/')
-                os.system(f'cp {from_dir}/config.json tmp_{tmp_ts}/')
-                tokenizer = AutoTokenizer.from_pretrained(f"tmp_{tmp_ts}/")
-            else:
-                logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
-                tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
-        else:
-            logging.info(f"loading from {pretrain_paths[0]}")
-            tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}")
+    logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
+    tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
 
-    sub_ds = CommonLitDataset(df, tokenizer, config)    
-    
-    sub_ds_loader = torch.utils.data.DataLoader(
-            sub_ds,
-            batch_size = config['VALID_BATCH_SIZE'],
-            num_workers = 2,
-            drop_last=False,
-        )
+    sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
     
     
-    scores = []
-    embeds = []
+    start_logits = []
+    end_logits = []
 
     for p in pretrain_paths:
-
-        #model = AutoModelForSequenceClassification.from_pretrained(p,num_labels=1)
-        model_class = getattr(model, config['MODEL_CLASS'])
+        model_class = getattr(model_import, config['MODEL_CLASS'])
         
         # hardcode upload fix:
-        if "single-model-v7-1627797474/model_3" in p:
-            model_config = json.load(open(f'../input/single-model-v7-1627797474/model_2/training_config.json'))
-            subprocess.getoutput("mkdir /tmp/model_3")
-            subprocess.getoutput("cp ../input/single-model-v7-1627797474/model_3/*.bin /tmp/model_3/")
-            subprocess.getoutput("cp ../input/single-model-v7-1627797474/model_2/*.json /tmp/model_3/")
-            subprocess.getoutput("cp -r ../input/single-model-v7-1627797474/model_2/tokenizer /tmp/model_3/")
-        else:
-            
-            model_config = json.load(open(f'{p}/training_config.json'))
-            
-        model_config = {**base_config, **model_config}
-        
+        model_config = TrainingConfig(json.load(open(f'{p}/training_config.json')))
+
         logging.info(f"loading model class:{config['MODEL_CLASS']}\n pretrain: {str(p)}, config:{model_config}")
       
         if model_config['EMBED_OTHER_GPU'] is not None:
             model_config['EMBED_OTHER_GPU'] = 0
 
             
-        if "single-model-v7-1627797474/model_3" in p:
-            model = model_class(from_pretrain='/tmp/model_3', model_config=model_config)
-            model.load_checkpoint('/tmp/model_3')
-        else:
-            model = model_class(from_pretrain=p, model_config=model_config)
-            model.load_checkpoint(p)
+        model = model_class(from_pretrain=p, model_config=model_config)
+        model.load_checkpoint(p)
         model.to(device)
-        
-        #print('loading checkpoint...')
-    
-        #checkpoint = torch.load(os.path.join(p, WEIGHTS_NAME), map_location=torch.device('cpu'))
-        #model.load_state_dict(checkpoint,strict=False)
 
-        #print(f'{os.path.join(p, WEIGHTS_NAME)} loaded.')
+        pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer, return_embed=True)
 
-        
-        #print(f"input to infer:{df}")
-        outputs, output_embeds = infer(sub_ds_loader,model,device, model_config, return_embed=True)
-        #print(f"output to infer:{output_embeds}")
-
-        #print(sum)
-        logging.info(outputs)
-
-        pred_sum += outputs
-        scores.append(outputs)
-        embeds.append(output_embeds)
+        start_logits += pred_start
+        end_logits += pred_end
         
         
         # cleanup after fold is done
@@ -666,8 +668,15 @@ def pred_df(df, config, upload_name='pretrained-model-1621892031'):
         torch.cuda.empty_cache()
         
 
-    pred_sum = pred_sum/(len(pretrain_paths))
-    return pred_sum, scores, embeds
+    start_logits = start_logits/(len(pretrain_paths))
+    end_logits = end_logits/(len(pretrain_paths))
+
+    preds = postprocess_qa_predictions(tokenizer, features,
+                                       start_logits, end_logits)
+
+    df['PredictionString'] = df['id'].map(preds)
+
+    return df
 
 
 # In[ ]:
@@ -687,40 +696,36 @@ def create_submission(_,predictions, calibrate_rms=None):
 # In[ ]:
 
 
-def gen_submission(TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
+def gen_submission(train, test, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
     to_ret = None
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
             # test first...
-            pred_sum_train, _, _ = pred_df(train[['excerpt','id']], config)
+            res_df = pred_df(train[['excerpt','id']], config)
+            res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
+            jaccard_metric = res_df['jaccard'].mean()
+            assert jaccard_metric > 0.85
 
-            loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
-            assert loss_on_train < 0.55
+            logging.info(f"loss on training: {jaccard_metric}")
 
-            logging.info(f"loss on training: {loss_on_train}")
+        res_df = pred_df(test, config)
 
-        pred_sum, _, _ = pred_df(test, config)
-        
-        to_ret = pred_sum
-
-
-        pred = create_submission(test, pred_sum)
+        pred = res_df[['id', 'PredictionString']]
         logging.info(pred.head())
     else:
         # test infer on training set when it's training mode...
-        pred_sum_train, _, _ = pred_df(train[['excerpt','id']], config)
-        loss_on_train = loss_fn(torch.tensor(pred_sum_train), torch.tensor(train['target'].values), config, loss_type='sqrt_mse').item()
-        assert loss_on_train < 0.55, f"{loss_on_train} shoudl be small"
+        res_df = pred_df(train[['excerpt','id']], config)
+        res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
-        logging.info(f"loss on training: {loss_on_train}")
-        to_ret = pred_sum_train
+        jaccard_metric = res_df['jaccard'].mean()
+        assert jaccard_metric > 0.85
+
+        logging.info(f"loss on training: {jaccard_metric}")
 
         
     if not TRAIN_MODE and gen_file:
         pred.to_csv('./submission.csv',index=False)
-        
-    return to_ret
 
 
 # In[ ]:

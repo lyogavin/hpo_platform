@@ -3,7 +3,7 @@
 
 
 
-import configparser
+import collections
 import torch
 #import torchvision
 import numpy as np
@@ -131,6 +131,7 @@ def prepare_train_features(config, example, tokenizer):
     for i, offsets in enumerate(offset_mapping):
         feature = {}
         feature['context'] = example['context']
+        feature['answer_text'] = example["answer_start"]
 
         input_ids = tokenized_example["input_ids"][i]
         attention_mask = tokenized_example["attention_mask"][i]
@@ -138,6 +139,8 @@ def prepare_train_features(config, example, tokenizer):
         feature['input_ids'] = input_ids
         feature['attention_mask'] = attention_mask
         feature['offset_mapping'] = offsets
+        feature["example_id"] = example['id']
+        feature['sequence_ids'] = [0 if i is None else i for i in tokenized_example.sequence_ids(i)]
 
         cls_index = input_ids.index(tokenizer.cls_token_id)
         sequence_ids = tokenized_example.sequence_ids(i)
@@ -175,6 +178,34 @@ def prepare_train_features(config, example, tokenizer):
     return features
 
 
+def prepare_test_features(config, example, tokenizer):
+    example["question"] = example["question"].lstrip()
+
+    tokenized_example = tokenizer(
+        example["question"],
+        example["context"],
+        truncation="only_second",
+        max_length=config['MAX_LEN'],
+        stride=config['STRIDE'],
+        return_overflowing_tokens=True,
+        return_offsets_mapping=True,
+        padding="max_length",
+    )
+
+    features = []
+    for i in range(len(tokenized_example["input_ids"])):
+        feature = {}
+        feature["example_id"] = example['id']
+        feature['context'] = example['context']
+        feature['question'] = example['question']
+        feature['input_ids'] = tokenized_example['input_ids'][i]
+        feature['attention_mask'] = tokenized_example['attention_mask'][i]
+        feature['offset_mapping'] = tokenized_example['offset_mapping'][i]
+        feature['sequence_ids'] = [0 if i is None else i for i in tokenized_example.sequence_ids(i)]
+        features.append(feature)
+    return features
+
+
 class DatasetRetriever(Dataset):
     def __init__(self, features, mode='train'):
         super(DatasetRetriever, self).__init__()
@@ -186,6 +217,7 @@ class DatasetRetriever(Dataset):
 
     def __getitem__(self, item):
         feature = self.features[item]
+        '''
         if self.mode == 'train':
             return {
                 'input_ids': torch.tensor(feature['input_ids'], dtype=torch.long),
@@ -195,16 +227,16 @@ class DatasetRetriever(Dataset):
                 'end_position': torch.tensor(feature['end_position'], dtype=torch.long),
                 'context': feature['context']
             }
-        else:
-            return {
-                'input_ids': torch.tensor(feature['input_ids'], dtype=torch.long),
-                'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
-                'offset_mapping': feature['offset_mapping'],
-                'sequence_ids': feature['sequence_ids'],
-                'id': feature['example_id'],
-                'context': feature['context'],
-                'question': feature['question']
-            }
+        else:'''
+        return {
+            'input_ids': torch.tensor(feature['input_ids'], dtype=torch.long),
+            'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
+            'offset_mapping': feature['offset_mapping'],
+            'sequence_ids': feature['sequence_ids'],
+            'id': feature['example_id'],
+            'context': feature['context'],
+            'question': feature['question']
+        }
 
 
 
@@ -361,8 +393,34 @@ def make_loader(
         drop_last=False
     )
     logging.info(f"loaders created, num steps: train-{len(train_dataloader)}, val-{len(valid_dataloader)}")
-    return train_dataloader, valid_dataloader
+    return train_dataloader, valid_dataloader, train_features, valid_features
 
+def make_test_loader(
+        config,
+        tokenizer,
+        df=None):
+
+    input_path = config['DATA_ROOT_PATH']
+
+    if df is None:
+        test = pd.read_csv(f'{input_path}/chaii-hindi-and-tamil-question-answering/test.csv')
+    else:
+        test = df
+
+    test_features = []
+    for i, row in test.iterrows():
+        test_features += prepare_test_features(config, row, tokenizer)
+
+    test_dataset = DatasetRetriever(test_features, mode='test')
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=config['VALID_BATCH_SIZE'],
+        sampler=SequentialSampler(test_dataset),
+        num_workers=optimal_num_of_loader_workers(),
+        pin_memory=True,
+        drop_last=False
+    )
+    return test_dataloader, test_features
 
 class CommonLitDataset(nn.Module):
     def __init__(self, data, tokenizer, config, reweighting=False):
@@ -446,8 +504,108 @@ class StratifiedBatchSampler:
     def __len__(self):
         return len(self.y)
 
+def postprocess_qa_predictions(tokenizer, features,
+                               all_start_logits, all_end_logits,
+                               n_best_size=20, max_answer_length=30):
+    features_per_example = collections.defaultdict(list)
+    for i, feature in enumerate(features):
+        features_per_example[feature["example_id"]].append(i)
+
+
+    predictions = collections.OrderedDict()
+
+    logging.info(f"Post-processing {len(features_per_example)} example predictions split into {len(features)} features.")
+
+    for example_id, features in features_per_example.items():
+
+        min_null_score = None
+        valid_answers = []
+
+        context = features[0]['context'] if len(features) > 0 else None
+        for feature_index in features:
+            start_logits = all_start_logits[feature_index]
+            end_logits = all_end_logits[feature_index]
+
+            sequence_ids = features[feature_index]["sequence_ids"]
+            context_index = 1
+
+            features[feature_index]["offset_mapping"] = [
+                (o if sequence_ids[k] == context_index else None)
+                for k, o in enumerate(features[feature_index]["offset_mapping"])
+            ]
+            offset_mapping = features[feature_index]["offset_mapping"]
+            cls_index = features[feature_index]["input_ids"].index(tokenizer.cls_token_id)
+            feature_null_score = start_logits[cls_index] + end_logits[cls_index]
+            if min_null_score is None or min_null_score < feature_null_score:
+                min_null_score = feature_null_score
+
+            start_indexes = np.argsort(start_logits)[-1: -n_best_size - 1: -1].tolist()
+            end_indexes = np.argsort(end_logits)[-1: -n_best_size - 1: -1].tolist()
+            for start_index in start_indexes:
+                for end_index in end_indexes:
+                    if (
+                            start_index >= len(offset_mapping)
+                            or end_index >= len(offset_mapping)
+                            or offset_mapping[start_index] is None
+                            or offset_mapping[end_index] is None
+                    ):
+                        continue
+                    # Don't consider answers with a length that is either < 0 or > max_answer_length.
+                    if end_index < start_index or end_index - start_index + 1 > max_answer_length:
+                        continue
+
+                    start_char = offset_mapping[start_index][0]
+                    end_char = offset_mapping[end_index][1]
+                    valid_answers.append(
+                        {
+                            "score": start_logits[start_index] + end_logits[end_index],
+                            "text": context[start_char: end_char]
+                        }
+                    )
+
+        if len(valid_answers) > 0:
+            best_answer = sorted(valid_answers, key=lambda x: x["score"], reverse=True)[0]
+        else:
+            best_answer = {"text": "", "score": 0.0}
+
+        predictions[example_id] = best_answer["text"]
+
+    return predictions
+
 
 # test...
 if __name__ == "__main__":
     from utils.config import TrainingConfig
-    print(get_data_kfold_split(TrainingConfig({'DATA_ROOT_PATH':'../../chaii/input/', 'USE_TRAIN_AS_TEST': False})))
+    config = TrainingConfig({'DATA_ROOT_PATH':'../../chaii/input/', 'USE_TRAIN_AS_TEST': False})
+    train, split_output = get_data_kfold_split(config)
+    print(train)
+    print(split_output)
+
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained('deepset/xlm-roberta-large-squad2')
+    train_features = []
+    for i, row in train.iterrows():
+        exp = tokenizer(
+            row["question"],
+            row["context"],
+            truncation="only_second",
+            max_length=config['MAX_LEN'],
+            stride=config['STRIDE'],
+            return_overflowing_tokens=True,
+            return_offsets_mapping=True,
+            padding="max_length",
+        )
+        if len(exp['input_ids']) > 4:
+            print(f"question: {len(tokenizer(row['question'])['input_ids'])}")
+            print(f"context: {len(tokenizer(row['context'])['input_ids'])}")
+            #print(f"context: {row['context']}")
+            print(f"input_ids: {len(exp['input_ids'])}")
+            print(f"input_ids: {[len(x) for x in exp['input_ids']]}")
+
+        ret = prepare_train_features(config, row, tokenizer)
+        #f len(ret) > 1:
+        #    print(f"row: {row} -> features: {ret}")
+        train_features += ret
+
+    #nexp = pd.Series([ft['example_id'] for ft in train_features]).nunique()
+    print(f"features per example: {len(train_features)/len(train)}")

@@ -5,6 +5,7 @@
 
 import configparser
 import torch
+import collections
 #import torchvision
 import numpy as np
 #import matplotlib.pyplot as plt
@@ -106,7 +107,7 @@ from transformers import (
 )
 import os
 from train.loss import loss_fn
-
+from train.data import postprocess_qa_predictions
 
 class AccumulateMeter(object):
     def __init__(self, previous_best=None):
@@ -115,8 +116,7 @@ class AccumulateMeter(object):
         self.last_best = None
 
     def reset(self, reset_best=False):
-        self.contexts = []
-        self.offset_mappings = []
+        self.features = []
 
         self.pred_starts = []
         self.pred_ends = []
@@ -127,23 +127,22 @@ class AccumulateMeter(object):
             self.best = None
             self.last_best = None
 
-    def update(self, contexts, offset_mappings, pred_starts, pred_ends, target_starts, target_ends):
+    def update(self, features, pred_starts, pred_ends, target_starts, target_ends):
         self.pred_starts.extend(pred_starts.tolist())
 
         self.pred_ends.extend(pred_ends.tolist())
         self.target_starts.extend(target_starts.tolist())
         self.target_ends.extend(target_ends.tolist())
-        self.contexts.extend(contexts)
-        self.offset_mappings.extend(offset_mappings)
+        self.features.extend(features)
 
-    def get_metrics(self):
+    def get_metrics(self, tokenzier):
         if len(self.contexts) == 0:
             return {}, False, self.last_best
 
         try:
-            res = get_metrics(self.contexts, self.offset_mappings, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
+            res = get_metrics(self.features, tokenzier, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
         except Exception as e:
-            logging.info(f"exception getting metric for: {(self.contexts, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)}")
+            logging.info(f"exception getting metric for: {(self.features, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)}")
             raise e
         is_best = False
         if self.best is None or res['jaccard'] > self.best:
@@ -160,7 +159,7 @@ def jaccard(str1, str2):
         return 0
     return float(len(c)) / (len(a) + len(b) - len(c))
 
-def get_metrics(contexts,offset_mappings, pred_starts, pred_ends, target_starts, target_ends):
+def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, target_ends):
     metrics = ['loss', 'jaccard']
 
     res_dict = {}
@@ -172,10 +171,14 @@ def get_metrics(contexts,offset_mappings, pred_starts, pred_ends, target_starts,
             #for context, pred_start, pred_end, target_start, target_end in \
             #    zip(contexts, pred_starts, pred_ends, target_starts, target_ends):
             #    logging.info(f"{pred_start}:{pred_end}, {target_start}:{target_end}")
-            res = [jaccard(context[offset_mapping[np.argmax(pred_start)][0]:offset_mapping[np.argmax(pred_end)][1]+1],
-                           context[offset_mapping[target_start][0]:offset_mapping[target_end][1]+1])
-                   for context, offset_mapping, pred_start, pred_end, target_start, target_end in
-                   zip(contexts, offset_mappings, pred_starts, pred_ends, target_starts, target_ends)]
+            text_predictions = postprocess_qa_predictions(tokenzier, features, pred_starts, pred_ends)
+            example_id_to_answers = {}
+            for feat in features:
+                example_id_to_answers[feat['example_id']] = feat['answer_text']
+
+            res = [jaccard(pred_text,
+                           example_id_to_answers[example_id])
+                   for example_id, pred_text in text_predictions.items()]
             res = np.array(res).mean()
 
         res_dict[metric] = res
