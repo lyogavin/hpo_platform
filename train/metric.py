@@ -175,7 +175,7 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
             text_predictions = postprocess_qa_predictions(tokenzier, features, pred_starts, pred_ends)
             example_id_to_answers = {}
             for feat in features:
-                example_id_to_answers[feat['example_id']] = feat['answer_text']
+                example_id_to_answers[feat['id']] = feat['answer_text']
 
             res = [jaccard(pred_text,
                            example_id_to_answers[example_id])
