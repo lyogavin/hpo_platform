@@ -523,13 +523,13 @@ def postprocess_qa_predictions(tokenizer, features,
 
     logging.info(f"Post-processing {len(features_per_example)} example predictions split into {len(features)} features.")
 
-    for example_id, features in features_per_example.items():
+    for example_id, features_indice in features_per_example.items():
 
         min_null_score = None
         valid_answers = []
 
-        context = features[0]['context'] if len(features) > 0 else None
-        for feature_index in features:
+        context = features[features_indice[0]]['context'] if len(features_indice) > 0 else None
+        for feature_index in features_indice:
             start_logits = all_start_logits[feature_index]
             end_logits = all_end_logits[feature_index]
 
