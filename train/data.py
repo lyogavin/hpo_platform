@@ -131,6 +131,7 @@ def prepare_train_features(config, example, tokenizer):
     for i, offsets in enumerate(offset_mapping):
         feature = {}
         feature['context'] = example['context']
+        feature['question'] = example['question']
         feature['answer_text'] = example["answer_start"]
 
         input_ids = tokenized_example["input_ids"][i]
