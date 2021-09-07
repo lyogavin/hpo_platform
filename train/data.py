@@ -255,10 +255,10 @@ def get_data_kfold_split(config):
     test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
     external_mlqa = pd.read_csv(f'{input_path}mlqa-hindi-processed/mlqa_hindi.csv')
     # add id:
-    external_mlqa['id'] = external_mlqa.index.apply(lambda x: f"mlqa_{x}")
+    external_mlqa['id'] = external_mlqa.index.values + "_mlqa"
     external_xquad = pd.read_csv(f'{input_path}mlqa-hindi-processed/xquad.csv')
     # add id:
-    external_mlqa['id'] = external_mlqa.index.apply(lambda x: f"xquad_{x}")
+    external_xquad['id'] = external_xquad.index.values + "xquad"
     external_train = pd.concat([external_mlqa, external_xquad])
 
     if config['TEST_RUN']:
