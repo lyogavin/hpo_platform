@@ -136,7 +136,7 @@ class AccumulateMeter(object):
         self.features.extend(features)
 
     def get_metrics(self, tokenzier):
-        if len(self.contexts) == 0:
+        if len(self.features) == 0:
             return {}, False, self.last_best
 
         try:
