@@ -134,7 +134,7 @@ class AccumulateMeter(object):
         self.target_starts.extend(target_starts.tolist())
         self.target_ends.extend(target_ends.tolist())
 
-        self.features.extend([{k: features[k][i]} for k in features.keys() for i in range(len(features['context']))])
+        self.features.extend([{k: features[k].tolist()[i]} for k in features.keys() for i in range(len(features['context']))])
 
     def get_metrics(self, tokenzier):
         if len(self.features) == 0:
