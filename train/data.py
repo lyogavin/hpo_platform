@@ -229,19 +229,21 @@ class DatasetRetriever(Dataset):
                 'context': feature['context']
             }
         else:'''
-        return {
+        to_ret = {
             'input_ids': torch.tensor(feature['input_ids'], dtype=torch.long),
             'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
             'offset_mapping': torch.tensor(feature['offset_mapping'], dtype=torch.long),
             'sequence_ids': torch.tensor(feature['sequence_ids'], dtype=torch.long),
-            'start_position': torch.tensor(feature['start_position'], dtype=torch.long),
-            'end_position': torch.tensor(feature['end_position'], dtype=torch.long),
             'id': feature['example_id'],
             'context': feature['context'],
             'question': feature['question'],
             'answer_text': feature['answer_text'],
             #'features_index':item
         }
+        if 'start_position' in feature:
+            to_ret['start_position'] = torch.tensor(feature['start_position'], dtype=torch.long)
+            to_ret['end_position'] = torch.tensor(feature['end_position'], dtype=torch.long)
+        return to_ret
 
 
 
