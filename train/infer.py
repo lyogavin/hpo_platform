@@ -249,7 +249,7 @@ def pred_df(df, pretrain_base_path):
         model.load_checkpoint(p)
         model.to(device)
 
-        pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer, return_embed=True)
+        pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer)
 
         start_logits += pred_start
         end_logits += pred_end
