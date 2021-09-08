@@ -80,6 +80,9 @@ class TrainingConfig:
         assert key in default_train_config or key in default_runtime_config, f"must define default value for key: {key}"
         return self.config[key]
 
+    def __setitem__(self, key, value):
+        self.config[key] = value
+
     def __contains__(self, key):
         return key in self.config
 
