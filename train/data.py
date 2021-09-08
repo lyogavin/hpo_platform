@@ -249,8 +249,8 @@ def get_stratified_col(train):
     #return train['context'].apply(lambda x: len(x))
     return train['language']
 
-def get_train_and_test_df():
-    input_path = config['DATA_ROOT_PATH']
+def get_train_and_test_df(root_path='../input/'):
+    input_path = root_path
 
     train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
     test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
