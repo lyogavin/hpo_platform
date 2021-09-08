@@ -432,7 +432,7 @@ def make_test_loader(
         test_dataset,
         batch_size=config['VALID_BATCH_SIZE'],
         sampler=SequentialSampler(test_dataset),
-        num_workers=optimal_num_of_loader_workers(),
+        num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
         drop_last=False
     )
