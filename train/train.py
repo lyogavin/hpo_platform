@@ -152,18 +152,26 @@ from pathlib import Path
 import distutils
 
 def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fold):
-    original_model.save_pretrained(paralelled_model, f'{saving_dir}/model_{fold}')
-    save_training_config(config, f'{saving_dir}/model_{fold}')
-    tokenizer.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
 
-    # save config another copy in tokenizer
-    original_model.roberta.config.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
+    with Timer("training saving") as saving_timer:
 
-    # save source files...
-    path = Path(os.path.dirname(os.path.abspath(__file__)))
-    dir_util.copy_tree(path.parent.absolute(), f'{saving_dir}/src/')
+        original_model.save_pretrained(paralelled_model, f'{saving_dir}/model_{fold}')
+        save_training_config(config, f'{saving_dir}/model_{fold}')
+        tokenizer.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
 
-    logging.info(f"saved in {saving_dir}/model_{fold}")
+        # save config another copy in tokenizer
+        original_model.roberta.config.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
+
+        # save source files...
+        path = Path(os.path.dirname(os.path.abspath(__file__)))
+        dir_util.copy_tree(path.parent.absolute(), f'{saving_dir}/src/')
+
+        logging.info(f"saved in {saving_dir}/model_{fold}")
+
+        import shutil
+        shutil.make_archive(f"{saving_dir}", 'zip', f"{saving_dir}")
+
+    logging.info(saving_timer.get_total_secs_str())
 
 
 
