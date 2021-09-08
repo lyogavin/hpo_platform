@@ -27,7 +27,7 @@ from sklearn.model_selection import StratifiedKFold,KFold
 from scipy.stats import spearmanr
 warnings.filterwarnings("ignore")
 #get_ipython().magic('matplotlib inline')
-
+from distutils import file_util, dir_util
 import os
 import time
 import random
@@ -160,7 +160,7 @@ def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fo
 
     # save source files...
     path = Path(os.path.dirname(os.path.abspath(__file__)))
-    distutils.dir_util.copy_tree(path.parent.absolute(), f'{saving_dir}/src/')
+    dir_util.copy_tree(path.parent.absolute(), f'{saving_dir}/src/')
 
     logging.info(f"saved in {saving_dir}/model_{fold}")
 
