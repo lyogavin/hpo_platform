@@ -249,6 +249,13 @@ def get_stratified_col(train):
     #return train['context'].apply(lambda x: len(x))
     return train['language']
 
+def get_train_and_test_df():
+    input_path = config['DATA_ROOT_PATH']
+
+    train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
+    test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
+    return train, test
+
 def get_data_kfold_split(config):
 
     input_path = config['DATA_ROOT_PATH']
