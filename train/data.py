@@ -237,12 +237,12 @@ class DatasetRetriever(Dataset):
             'id': feature['example_id'],
             'context': feature['context'],
             'question': feature['question'],
-            'answer_text': feature['answer_text'],
             #'features_index':item
         }
         if 'start_position' in feature:
             to_ret['start_position'] = torch.tensor(feature['start_position'], dtype=torch.long)
             to_ret['end_position'] = torch.tensor(feature['end_position'], dtype=torch.long)
+            to_ret['answer_text'] = feature['answer_text']
         return to_ret
 
 
