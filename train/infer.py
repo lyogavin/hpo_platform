@@ -295,7 +295,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
             # test first...
-            res_df = pred_df(train[['excerpt','id']], config)
+            res_df = pred_df(train, pretrain_base_path)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
             jaccard_metric = res_df['jaccard'].mean()
@@ -303,13 +303,13 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
 
             logging.info(f"loss on training: {jaccard_metric}")
 
-        res_df = pred_df(test, config)
+        res_df = pred_df(test, pretrain_base_path)
 
         pred = res_df[['id', 'PredictionString']]
         logging.info(pred.head())
     else:
         # test infer on training set when it's training mode...
-        res_df = pred_df(train[['excerpt','id']], config)
+        res_df = pred_df(train, pretrain_base_path)
         res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
         jaccard_metric = res_df['jaccard'].mean()
