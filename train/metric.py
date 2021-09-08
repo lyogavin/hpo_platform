@@ -146,6 +146,9 @@ class AccumulateMeter(object):
             assert 'id' in x, f"{x.keys()} has to have id field"
         self.features.extend(to_extend)
 
+    def get_features_count(self):
+        return len(self.features)
+
     def get_metrics(self, tokenzier):
         if len(self.features) == 0:
             return {}, False, self.last_best

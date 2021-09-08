@@ -90,6 +90,7 @@ from train.metric import *
 from model import model
 from exp_record_store.exp_record import ExpRecord
 from utils.utils import logging
+from utils.timer import Timer
 #logging = utils.logging
 
 
@@ -196,8 +197,15 @@ def train_fn(data_loader, valid_loader,
                 
                 
     GRAD_DESCD_STEP = True
+
+    training_timer = Timer("training")
+    train_steps_metrics_timer = Timer("train steps metrics")
+    total_train_metrics_timer = Timer("train total metrics")
+    eval_metrics_timer = Timer("eval metrics")
                     
     for idx, d in enumerate(data_loader):
+
+        training_timer.start_timer()
 
         targets_start, targets_end = d['start_position'].to(device), d['end_position'].to(device)
 
@@ -237,6 +245,8 @@ def train_fn(data_loader, valid_loader,
         
         last_lr = scheduler.get_last_lr()
 
+        training_timer.stop_timer()
+
         # update meters
         train_steps_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
         train_total_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
@@ -245,8 +255,15 @@ def train_fn(data_loader, valid_loader,
             # Evaluate the model on train_loader.
             num_steps = step - last_eval_step
             last_train_eval_step = step
-            train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer)
-            train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer)
+
+            with train_steps_metrics_timer:
+                train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer)
+            with total_train_metrics_timer:
+                if train_steps_meter.get_features_count() != train_total_meter.get_features_count():
+                    train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer)
+                else:
+                    train_total_metrics, train_total_is_best, train_total_last_best = train_steps_metrics, train_steps_is_best, train_steps_last_best
+
             logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)}\n'
                          f'Train Loss: {loss.item():.4f} Train Steps metrics(new best:{train_steps_is_best}) : {pprint_metrics(train_steps_metrics)}\n'
                          f'Train Total metrics(new best:{train_total_is_best}) : {pprint_metrics(train_total_metrics)}')
@@ -259,7 +276,8 @@ def train_fn(data_loader, valid_loader,
             num_steps = step - last_eval_step
             last_eval_step = step
 
-            inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config, best_metric, tokenizer)
+            with eval_metrics_timer:
+                inter_eval_metrics, is_best, last_best = eval(valid_loader,model,device, config, best_metric, tokenizer)
             logging.info(f'@desced step {step} @data step {idx} last lr: {min(last_lr)}-{max(last_lr)}\n'
                          f'Train Loss: {loss.item():.4f} Val metrics(new best:{is_best}) : {pprint_metrics(inter_eval_metrics)}')
                 
@@ -285,6 +303,9 @@ def train_fn(data_loader, valid_loader,
 
         if GRAD_DESCD_STEP:
             step +=1
+
+        logging.info(f"{training_timer.get_total_secs_str()}, {train_steps_metrics_timer.get_total_secs_str()}, "
+                     f"{total_train_metrics_timer.get_total_secs_str()}, {eval_metrics_timer.get_total_secs_str()}")
     
     return exp_record, best_metric
 
