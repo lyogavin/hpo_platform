@@ -321,11 +321,17 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
     if not TRAIN_MODE and gen_file:
         pred.to_csv('./submission.csv',index=False)
 
+def get_id_url_from_shared_link(link):
+    end = link.index("/view")
+    start = link[:end].rindex("/")
+    id = link[start+1:end]
+    return f"https://drive.google.com/uc?id={id}"
 
 def download_saving(url, saving_ts):
+    url = get_id_url_from_shared_link(url)
     #ensure dir:
-    os.mkdir("./saved_training")
-    os.mkdir(f"./saved_training/pretrained-{saving_ts}")
+    os.makedirs("./saved_training", exist_ok=True)
+    os.makedirs(f"./saved_training/pretrained-{saving_ts}", exist_ok=True)
 
     downloaded_file = f"./saved_training/pretrained-{saving_ts}.zip"
     gdown.download(url, downloaded_file, quiet=False)
@@ -333,6 +339,8 @@ def download_saving(url, saving_ts):
     import zipfile
     with zipfile.ZipFile(downloaded_file, 'r') as zip_ref:
         zip_ref.extractall(f"./saved_training/pretrained-{saving_ts}")
+
+    os.remove(downloaded_file)
 
 
 def infer_and_gen_submission(saving_ts, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
