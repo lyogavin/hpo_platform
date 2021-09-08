@@ -91,7 +91,7 @@ from model import model
 from exp_record_store.exp_record import ExpRecord
 from utils.utils import logging
 #logging = utils.logging
-
+from utils.config import *
 
 # In[2]:
 
