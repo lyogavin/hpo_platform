@@ -245,7 +245,7 @@ def pred_df(df, pretrain_base_path):
             model_config['EMBED_OTHER_GPU'] = 0
 
             
-        model = model_class(from_pretrain=p, model_config=model_config)
+        model = model_class(from_pretrain=p, config=model_config)
         model.load_checkpoint(p)
         model.to(device)
 
