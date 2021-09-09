@@ -217,13 +217,13 @@ class SpanningQAModel(nn.Module):
         else:
             self.roberta = AutoModel.from_pretrained(config['BERT_PATH'], config = self.model_config)
 
-        self.qa_outputs = nn.Linear(self.model_config.hidden_size, 2)
-        self.dropout = nn.Dropout(self.model_config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(self.roberta.config.hidden_size, 2)
+        self.dropout = nn.Dropout(self.roberta.config.hidden_dropout_prob)
         self._init_weights(self.qa_outputs)
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.model_config.initializer_range)
+            module.weight.data.normal_(mean=0.0, std=self.roberta.config.initializer_range)
             if module.bias is not None:
                 module.bias.data.zero_()
 
