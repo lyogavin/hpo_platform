@@ -197,10 +197,10 @@ class SpanningQAModel(nn.Module):
         self.config = config
         self.model_config = None
 
-        if from_pretrain is not None:
-            self.model_config = AutoConfig.from_pretrained(from_pretrain)
-        elif config["MODEL_CONFIG"] is not None:
-            self.model_config = AutoConfig.from_pretrained(config["MODEL_CONFIG"])
+        #if from_pretrain is not None:
+        #    self.model_config = AutoConfig.from_pretrained(from_pretrain)
+        #elif config["MODEL_CONFIG"] is not None:
+        #    self.model_config = AutoConfig.from_pretrained(config["MODEL_CONFIG"])
 
 
 
