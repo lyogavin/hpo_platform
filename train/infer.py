@@ -140,8 +140,8 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     model.eval()
     to_ret = {}
     with torch.no_grad():
-        outputs_starts = []
-        outputs_ends = []
+        outputs_starts = None
+        outputs_ends = None
 
         to_for = enumerate(data_loader)
         if use_tqdm:
@@ -170,8 +170,17 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
             outputs_end = outputs_end.squeeze(-1)
 
             
-            outputs_starts.extend(outputs_start.detach().cpu().tolist())
-            outputs_ends.extend(outputs_end.detach().cpu().tolist())
+            outputs_start = outputs_start.detach().cpu().numpy()
+            outputs_end = outputs_end.detach().cpu().numpy()
+
+            if outputs_starts is None:
+                outputs_starts = outputs_start
+            else:
+                outputs_starts = np.concatenate((outputs_starts, outputs_start), axis=0)
+            if outputs_ends is None:
+                outputs_ends = outputs_end
+            else:
+                outputs_ends = np.concatenate((outputs_ends, outputs_end), axis=0)
 
 
     return outputs_starts, outputs_ends
@@ -230,8 +239,8 @@ def pred_df(df, pretrain_base_path):
     sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
     
     
-    start_logits = []
-    end_logits = []
+    start_logits = None
+    end_logits = None
 
     for p in pretrain_paths:
         model_class = getattr(model_import, config['MODEL_CLASS'])
@@ -251,8 +260,14 @@ def pred_df(df, pretrain_base_path):
 
         pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer)
 
-        start_logits += pred_start
-        end_logits += pred_end
+        if start_logits is None:
+            start_logits = pred_start
+        else:
+            start_logits += pred_start
+        if end_logits is None:
+            end_logits = pred_end
+        else:
+            end_logits += pred_end
         
         
         # cleanup after fold is done
@@ -266,7 +281,7 @@ def pred_df(df, pretrain_base_path):
     end_logits = end_logits/(len(pretrain_paths))
 
     preds = postprocess_qa_predictions(tokenizer, features,
-                                       start_logits, end_logits)
+                                       start_logits.tolist(), end_logits.tolist())
 
     df['PredictionString'] = df['id'].map(preds)
 
