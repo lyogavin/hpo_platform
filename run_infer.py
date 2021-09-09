@@ -1,8 +1,10 @@
-
+from utils import utils
 from train import train
 from utils.config import TrainingConfig
 from train.infer import infer_and_gen_submission, download_saving
 import sys
+
+utils.logging.info("started infer...")
 
 if __name__ == "__main__":
 
