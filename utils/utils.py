@@ -49,7 +49,8 @@ from filelock import FileLock
 
 import os
 import time
-import logging, sys
+import logging as import_logging
+import sys
 
 run_ts = int(time.time())
 
@@ -58,17 +59,21 @@ logging_file_path = f"./logs/training_log_{run_ts}.log"
 
 
 handlers=[
-    logging.FileHandler(logging_file_path),
-    logging.StreamHandler(sys.stdout)
+    import_logging.FileHandler(logging_file_path),
+    import_logging.StreamHandler(sys.stdout)
 ]
     
 
-logging.basicConfig(
-    level=logging.INFO,
+import_logging.basicConfig(
+    level=import_logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=handlers
 )
 
+logging = import_logging.getLogger(__name__)
+
+logging.addHandler(handlers[0])
+logging.addHandler(handlers[1])
 
 # In[2]:
 
