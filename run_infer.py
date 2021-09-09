@@ -14,4 +14,9 @@ if __name__ == "__main__":
         url = sys.argv[2]
         download_saving(url, saving_ts)
     else:
-        infer_and_gen_submission(saving_ts, TRAIN_MODE=False, TEST_ON_TRAINING=False, gen_file=True)
+        test_on_training = False
+        for arg in sys.argv:
+            if "--TEST_ON_TRAINING" == arg:
+                test_on_training = True
+
+        infer_and_gen_submission(saving_ts, TRAIN_MODE=False, TEST_ON_TRAINING=test_on_training, gen_file=True)
