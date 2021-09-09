@@ -126,7 +126,6 @@ from transformers import (
     get_polynomial_decay_schedule_with_warmup
 )
 import os
-import gdown
 
 from pathlib import Path
 import distutils
@@ -343,6 +342,7 @@ def get_id_url_from_shared_link(link):
     return f"https://drive.google.com/uc?id={id}"
 
 def download_saving(url, saving_ts):
+    import gdown
     url = get_id_url_from_shared_link(url)
     #ensure dir:
     os.makedirs("./saved_training", exist_ok=True)
