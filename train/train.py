@@ -312,8 +312,8 @@ def train_fn(data_loader, valid_loader,
         if GRAD_DESCD_STEP:
             step +=1
 
-        logging.info(f"{training_timer.get_total_secs_str()}, {train_steps_metrics_timer.get_total_secs_str()}, "
-                     f"{total_train_metrics_timer.get_total_secs_str()}, {eval_metrics_timer.get_total_secs_str()}")
+    logging.info(f"{training_timer.get_total_secs_str()}, {train_steps_metrics_timer.get_total_secs_str()}, "
+                 f"{total_train_metrics_timer.get_total_secs_str()}, {eval_metrics_timer.get_total_secs_str()}")
     
     return exp_record, best_metric
 
