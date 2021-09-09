@@ -14,4 +14,4 @@ if __name__ == "__main__":
         url = sys.argv[2]
         download_saving(url, saving_ts)
     else:
-        infer_and_gen_submission(saving_ts, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True)
+        infer_and_gen_submission(saving_ts, TRAIN_MODE=False, TEST_ON_TRAINING=False, gen_file=True)
