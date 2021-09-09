@@ -358,10 +358,10 @@ def download_saving(url, saving_ts):
     os.remove(downloaded_file)
 
 
-def infer_and_gen_submission(saving_ts, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
+def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
 
     train, test = get_train_and_test_df()
-    pretrain_base_path = f"./saved_training/pretrained-{saving_ts}"
+    pretrain_base_path = f"{base_path}/pretrained-{saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
 
 # In[ ]:
