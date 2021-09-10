@@ -79,6 +79,10 @@ class TrainingConfig:
 
     def __getitem__(self, key):
         assert key in default_train_config or key in default_runtime_config, f"must define default value for key: {key}"
+
+        if key not in self.config:
+            # this happens when config is recovered from a previous persisted record, use default value:
+            return default_train_config[key] if key in default_train_config else default_runtime_config[key]
         return self.config[key]
 
     def __setitem__(self, key, value):
