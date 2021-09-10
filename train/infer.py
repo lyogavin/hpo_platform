@@ -347,6 +347,10 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
 
     return pred
 
+def infer_df(df, pretarined_path, nbest):
+    return gen_submission(pretarined_path, None, df, False, False, False, nbest)
+
+
 def get_id_url_from_shared_link(link):
     end = link.index("/view")
     start = link[:end].rindex("/")
