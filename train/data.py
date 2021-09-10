@@ -521,6 +521,22 @@ class StratifiedBatchSampler:
 
     def __len__(self):
         return len(self.y)
+def post_cleanup(context, pred):
+    bad_starts = [".", ",", "(", ")", "-", "–", ",", ";"]
+    bad_endings = ["...", "-", "(", ")", "–", ",", ";"]
+
+    if pred == "":
+        return pred
+
+    while any([pred.startswith(y) for y in bad_starts]):
+        pred = pred[1:]
+    while any([pred.endswith(y) for y in bad_endings]):
+        if pred.endswith("..."):
+            pred = pred[:-3]
+        else:
+            pred = pred[:-1]
+    return pred
+
 
 def postprocess_qa_predictions(tokenizer, features,
                                all_start_logits, all_end_logits,
@@ -589,7 +605,7 @@ def postprocess_qa_predictions(tokenizer, features,
         else:
             best_answer = {"text": "", "score": 0.0}
 
-        predictions[example_id] = best_answer["text"]
+        predictions[example_id] = post_cleanup(context, best_answer["text"])
 
     return predictions
 
