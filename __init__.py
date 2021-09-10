@@ -1,4 +1,5 @@
 
+sys.path.append('./')
 from utils.utils import logging
 
 from train.infer import gen_submission, download_saving
