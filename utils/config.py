@@ -45,6 +45,7 @@ default_train_config = {
     'REMOVE_NEWLINE':False,
     'TOKENIZER_PADDING':None,
     'STRIDE':0,
+    'USE_QUOREF':False,
 
 
     #model

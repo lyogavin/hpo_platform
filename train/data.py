@@ -271,6 +271,10 @@ def get_data_kfold_split(config):
     # add id:
     external_xquad['id'] = [f"xquad_{x}" for x in external_xquad.index.values]
     external_train = pd.concat([external_mlqa, external_xquad])
+    # add quoref:
+    if config['USE_QUOREF']:
+    external_quoref = pd.read_csv(f'{input_path}quoref/quoref_tamil_formated.csv')
+    external_train = external_train.append(external_quoref)
 
     if config['TEST_RUN']:
         train = train.sample(n=100)
