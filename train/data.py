@@ -274,6 +274,7 @@ def get_data_kfold_split(config):
     # add quoref:
     if config['USE_QUOREF']:
         external_quoref = pd.read_csv(f'{input_path}quoref/quoref_tamil_formated.csv')
+        external_quoref['language'] = 'tamil'
         external_train = external_train.append(external_quoref)
 
     if config['TEST_RUN']:
@@ -308,7 +309,7 @@ def get_data_kfold_split(config):
         if config['STRATEFIED']:
             bins = get_stratified_col(appended_train[:train_len])
 
-            split_output = kfold.split(X=train,y=bins)
+            split_output = kfold.split(X=appended_train[:train_len],y=bins)
         else:
             split_output = kfold.split(appended_train[:train_len])
 
