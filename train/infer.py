@@ -201,7 +201,7 @@ from pathlib import Path
 
 
     
-def pred_df(df, pretrain_base_path):
+def pred_df(df, pretrain_base_path, nbest=False):
     # get config from pretrain path first...
     pretrain_paths = []
 
@@ -279,12 +279,22 @@ def pred_df(df, pretrain_base_path):
     start_logits = start_logits/(len(pretrain_paths))
     end_logits = end_logits/(len(pretrain_paths))
 
-    preds = postprocess_qa_predictions(tokenizer, features,
-                                       start_logits.tolist(), end_logits.tolist())
+    if not nbest:
+        preds = postprocess_qa_predictions(tokenizer, features,
+                                           start_logits.tolist(),
+                                           end_logits.tolist())
+    else:
+        preds, preds_nbest = postprocess_qa_predictions(tokenizer, features,
+                                           start_logits.tolist(),
+                                           end_logits.tolist(), return_nbest=True)
 
     df['PredictionString'] = df['id'].map(preds)
 
-    return df
+    if not nbest:
+        return df
+    else:
+        df['PredictionStringNBest'] = df['id'].map(preds_nbest)
+        return preds_nbest
 
 
 # In[ ]:
@@ -304,7 +314,7 @@ def create_submission(_,predictions, calibrate_rms=None):
 # In[ ]:
 
 
-def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
+def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True, nbest=False):
     to_ret = None
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
@@ -317,7 +327,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
 
             logging.info(f"loss on training: {jaccard_metric}")
 
-        res_df = pred_df(test, pretrain_base_path)
+        res_df = pred_df(test, pretrain_base_path, nbest)
 
         pred = res_df[['id', 'PredictionString']]
         logging.info(pred.head())
@@ -334,6 +344,8 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
         
     if not TRAIN_MODE and gen_file:
         pred.to_csv('./submission.csv',index=False)
+
+    return pred
 
 def get_id_url_from_shared_link(link):
     end = link.index("/view")

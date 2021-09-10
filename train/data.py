@@ -540,13 +540,15 @@ def post_cleanup(context, pred):
 
 def postprocess_qa_predictions(tokenizer, features,
                                all_start_logits, all_end_logits,
-                               n_best_size=20, max_answer_length=30):
+                               n_best_size=20, max_answer_length=30,
+                               return_nbest = False):
     features_per_example = collections.defaultdict(list)
     for i, feature in enumerate(features):
         features_per_example[feature["example_id"]].append(i)
 
 
     predictions = collections.OrderedDict()
+    predictions_nbest = {}
 
     logging.info(f"Post-processing {len(features_per_example)} example predictions split into {len(features)} features.")
 
@@ -600,14 +602,22 @@ def postprocess_qa_predictions(tokenizer, features,
                     )
                     logging.debug(f"found: {context[start_char: end_char]}")
 
+        # post cleanup
+        for i in range(len(valid_answers)):
+            valid_answers[i]['text'] = post_cleanup(context, valid_answers[i]['text'])
+
         if len(valid_answers) > 0:
             best_answer = sorted(valid_answers, key=lambda x: x["score"], reverse=True)[0]
         else:
             best_answer = {"text": "", "score": 0.0}
 
-        predictions[example_id] = post_cleanup(context, best_answer["text"])
+        predictions[example_id] = best_answer["text"]
+        predictions_nbest[example_id] = valid_answers
 
-    return predictions
+    if return_nbest:
+        return predictions, predictions_nbest
+    else:
+        return predictions
 
 
 # test...
