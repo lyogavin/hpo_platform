@@ -548,7 +548,12 @@ def postprocess_qa_predictions(tokenizer, features,
                                return_nbest = False):
     features_per_example = collections.defaultdict(list)
     for i, feature in enumerate(features):
-        features_per_example[feature["example_id"]].append(i)
+        if 'example_id' in feature:
+            features_per_example[feature["example_id"]].append(i)
+        else:
+            assert 'id' in feature
+            features_per_example[feature["id"]].append(i)
+
 
 
     predictions = collections.OrderedDict()
