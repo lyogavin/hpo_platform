@@ -168,8 +168,8 @@ def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fo
 
         logging.info(f"saved in {saving_dir}/model_{fold}")
 
-        import shutil
-        shutil.make_archive(f"{saving_dir}", 'zip', f"{saving_dir}")
+        #import shutil
+        #shutil.make_archive(f"{saving_dir}", 'zip', f"{saving_dir}")
 
     logging.info(saving_timer.get_total_secs_str())
 
