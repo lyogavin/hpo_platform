@@ -15,7 +15,7 @@ import numpy as np
 
 
 
-def sample_top_n_for_row(context, question, from_embeds, n, lang):
+def sample_top_n_for_row(model, context, question, from_embeds, n, lang):
     embed_context = model.encode(context)
     embed_question = model.encode(question)
 
@@ -72,7 +72,7 @@ def get_similarity_sample(df_base, config, from_sample=None):
     sampled_dicts = []
     for lang in langs:
         for i,row in df_base.iterrows():
-            sampled_rows = sample_top_n_for_row(row['context'], row['question'], df_from,
+            sampled_rows = sample_top_n_for_row(model, row['context'], row['question'], df_from,
                                                 per_row_sample_count_lang_rounded[lang],
                                                 lang)
             sampled_dicts.extend(sampled_rows)
