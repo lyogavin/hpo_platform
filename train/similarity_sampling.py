@@ -151,11 +151,11 @@ if __name__ == "__main__":
         assert np.isclose(len(df), len(df_from), 1e-3)
         assert np.isclose(len(df[df.language == 'hindi']), len(df_from[df_from.language == 'hindi']), 1e-3)
 
-        print(f"test sampling coverage...")
-        # test sampling coverage:
-        df_from = get_datasets(config, config['SIM_SAMPLE_DATASETS'])
+    print(f"test sampling coverage...")
+    # test sampling coverage:
+    df_from = get_datasets(config, config['SIM_SAMPLE_DATASETS'])
 
-        train, _ = get_train_and_test_df(root_path='../chaii/input/')
+    train, _ = get_train_and_test_df(root_path='../chaii/input/')
 
     if TEST:
         sample_df = get_similarity_sample(train.sample(frac=0.05), config, from_sample=0.05)
