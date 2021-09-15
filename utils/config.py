@@ -14,6 +14,14 @@ default_runtime_config = {
     'PRED_ROOT_PATH':'../chaii/output/',
     'FORCE_NUM_LOADER_WORKER':None
 }
+
+similarity_sampling_config = {
+    #data-similarity sampling
+    'SIMILARIY_EMBED_MODEL':"paraphrase-multilingual-mpnet-base-v2",  # https://www.sbert.net/docs/pretrained_models.html#multi-lingual-models
+    'SIM_SAMPLE_DATASETS':{'MLQA', "XQUAD","QUOREF","NEWSQA"},
+    'SIM_SAMPLE_RATIO':1.0,
+    'SIM_SAMPLE_BY_LANG':True,
+}
 default_train_config = {
     # test run...
     'TEST_RUN':False,
@@ -47,11 +55,6 @@ default_train_config = {
     'STRIDE':0,
     'USE_QUOREF':False,
 
-    #data-similarity sampling
-    'SIMILARIY_EMBED_MODEL':"paraphrase-multilingual-mpnet-base-v2",  # https://www.sbert.net/docs/pretrained_models.html#multi-lingual-models
-    'SIM_SAMPLE_DATASETS':{'MLQA', "XQUAD","QUOREF","NEWSQA"},
-    'SIM_SAMPLE_RATIO':1.0,
-    'SIM_SAMPLE_BY_LANG':True,
 
 
     #model
@@ -77,6 +80,8 @@ default_train_config = {
     'STOP_AT_FOLD':-1,
 
 }
+
+default_train_config = {**similarity_sampling_config, **default_train_config}
 
 class TrainingConfig:
     def __init__(self, config):

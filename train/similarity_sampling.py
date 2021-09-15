@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     config = TrainingConfig({'SIM_SAMPLE_DATASETS': {'MLQA', "XQUAD"},
                              'SIMILARIY_EMBED_MODEL': 'multi-qa-MiniLM-L6-cos-v1',
-                             'SIM_SAMPLE_RATIO':2.0})
+                             'SIM_SAMPLE_RATIO':4.0})
 
 
     if not TEST_COVERAGE_ONLY:
@@ -163,6 +163,14 @@ if __name__ == "__main__":
         sample_df = get_similarity_sample(train, config)
 
     print(f"default sampling covers: {df_from.index.isin(sample_df.index.values).mean()}")
+    
+    import time
+    save_file = f"similarity_sampling_{int(time.time())}"
+    sample_df.to_csv(save_file + ".csv", index=False)
+    import json
+    with open(save_file + ".json", "w") as f:
+        json.dump({k:config[k] for k in similarity_sampling_config.keys()}, f)
+
 
 
 
