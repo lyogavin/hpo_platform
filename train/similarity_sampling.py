@@ -116,7 +116,7 @@ def gen_sim_sample_and_dump(config):
     with open(f'{config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.pickle', "wb") as f:
         pickle.dump(sim_sample_conf, f)
 
-    print(f"files dumped:\n {config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.csv}\n{config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.pickle")
+    print(f"files dumped:\n {config['DATA_ROOT_PATH']}/sim_sample_cache/{save_file}.csv}\n{config['DATA_ROOT_PATH']}/sim_sample_cache/{save_file}.pickle")
 
 
 
