@@ -101,7 +101,7 @@ def gen_sim_sample_and_dump(config):
 
     train, _ = get_train_and_test_df(root_path='../chaii/input/')
 
-
+    sample_df = get_similarity_sample(train, config)
     print(f"sampling covers: {df_from.index.isin(sample_df.index.values).mean()}")
 
     import time
