@@ -81,9 +81,11 @@ def get_similarity_sample(df_base, config, from_sample=None):
 
     # re-down-sample to bring down to wanted size
     to_ret_hindi = to_ret[to_ret['language'] == 'hindi']
-    to_ret_hindi = to_ret_hindi.sample(frac=total_sample_count_hindi/len(to_ret_hindi))
+    if len(to_ret_hindi) > 0:
+        to_ret_hindi = to_ret_hindi.sample(frac=total_sample_count_hindi/len(to_ret_hindi))
     to_ret_tamil = to_ret[to_ret['language'] == 'tamil']
-    to_ret_tamil = to_ret_tamil.sample(frac=total_sample_count_tamil/len(to_ret_tamil))
+    if len(to_ret_tamil) > 0:
+        to_ret_tamil = to_ret_tamil.sample(frac=total_sample_count_tamil/len(to_ret_tamil))
 
     to_ret = to_ret_hindi.append(to_ret_tamil)
     return to_ret
