@@ -27,7 +27,7 @@ def sample_top_n_for_row(context, question, from_embeds, n, lang):
     distances = from_embeds.apply(lambda x: util.cos_sim(embed_context, x['context_embed']).item() +
                                                             util.cos_sim(embed_question, x['question_embed']).item(), axis=1)
 
-    print(f"setting similarity for {embed_context} {embed_question}... to {distances}")
+    #print(f"setting similarity for {embed_context} {embed_question}... to {distances}")
 
     #from_embeds['similarity'] = distances
 
@@ -128,12 +128,16 @@ if __name__ == "__main__":
             lambda x: util.cos_sim(model.encode(x['context']), model.encode(df_from.iloc[i]['context'])).item() +
                       util.cos_sim(model.encode(x['question']), model.encode(df_from.iloc[i]['question'])).item(),
             axis=1)
-        print(df_from.loc[ids[-1]]['similarity'])
-        print(df_from[df_from['similarity'] > df_from.loc[ids[-1]]['similarity']])
+        #print(df_from.loc[ids[-1]]['similarity'])
+        #print(df_from[df_from['similarity'] > df_from.loc[ids[-1]]['similarity']])
         assert (df_from['similarity'] > df_from.loc[ids[-1]]['similarity']).sum() < 5
 
     # test distribution...
-    df = get_similarity_sample(df_from.sample(frac=0.5), config)
+    TEST=False
+    if TEST:
+        df = get_similarity_sample(df_from.sample(frac=0.5), config)
+    else:
+        df = get_similarity_sample(df_from, config)
 
     assert np.isclose(len(df), len(df_from), 1e-3)
     assert np.isclose(len(df[df.language == 'hindi']), len(df_from[df_from.language == 'hindi']), 1e-3)
@@ -143,7 +147,7 @@ if __name__ == "__main__":
     df_from = get_datasets(config, config['SIM_SAMPLE_DATASETS'])
 
     train, _ = get_train_and_test_df()
-    TEST=False
+
     if TEST:
         sample_df = get_similarity_sample(train.sample(frac=0.05), config, from_sample=0.05)
     else:
