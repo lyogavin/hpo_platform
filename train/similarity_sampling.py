@@ -148,7 +148,7 @@ if __name__ == "__main__":
     # test sampling coverage:
     df_from = get_datasets(config, config['SIM_SAMPLE_DATASETS'])
 
-    train, _ = get_train_and_test_df()
+    train, _ = get_train_and_test_df(root_path='../chaii/input/')
 
     if TEST:
         sample_df = get_similarity_sample(train.sample(frac=0.05), config, from_sample=0.05)
