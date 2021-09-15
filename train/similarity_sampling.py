@@ -7,7 +7,7 @@ sys.path.append('../')
 sys.path.append('./')
 
 from utils import utils
-from data import *
+from train.data import *
 from utils.config import *
 logging = utils.logging
 import math
