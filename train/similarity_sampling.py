@@ -155,7 +155,7 @@ if __name__ == "__main__":
     else:
         sample_df = get_similarity_sample(train, config)
 
-    print(f"default sampling covers: {sample_df.index.isin(df_from.index.values).mean()}")
+    print(f"default sampling covers: {df_from.index.isin(sample_df.index.values).mean()}")
 
 
 
