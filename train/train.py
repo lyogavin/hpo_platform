@@ -80,6 +80,7 @@ TEST_MODE = False
 
 import sys
 sys.path.append('../')
+sys.path.append('./')
 
 from utils.utils import *
 from train.loss import *

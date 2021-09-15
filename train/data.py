@@ -78,6 +78,7 @@ import time
 
 import sys
 sys.path.append('../')
+sys.path.append('./')
 
 from utils import utils
 
@@ -257,6 +258,43 @@ def get_train_and_test_df(root_path='../input/'):
     train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
     test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
     return train, test
+
+
+
+def get_datasets(config, datasets):
+    input_path = config['DATA_ROOT_PATH']
+    to_ret = []
+    for d in datasets:
+        if d =='MLQA': #, "XQUAD","QUOREF","NEWSQA"
+            external_mlqa = pd.read_csv(f'{input_path}mlqa-hindi-processed/mlqa_hindi.csv')
+            if 'id' not in external_mlqa.columns:
+                external_mlqa['id'] = [f"mlqa_{x}" for x in external_mlqa.index.values]
+
+            assert 'language' in external_mlqa.columns
+            to_ret.append(external_mlqa)
+        elif d =='XQUAD': #, "XQUAD","QUOREF","NEWSQA"
+            external_xquad = pd.read_csv(f'{input_path}mlqa-hindi-processed/xquad.csv')
+            if 'id' not in external_xquad.columns:
+                external_xquad['id'] = [f"xquad_{x}" for x in external_xquad.index.values]
+
+            assert 'language' in external_xquad.columns
+            to_ret.append(external_xquad)
+        elif d =='QUOREF': #, "XQUAD","QUOREF","NEWSQA"
+            external_quoref = pd.read_csv(f'{input_path}quoref/quoref_tamil_formated.csv')
+            external_quoref['language'] = 'tamil'
+            assert 'id' in external_quoref.columns
+            to_ret.append(external_quoref)
+        elif d =='NEWSQA': #, "XQUAD","QUOREF","NEWSQA"
+            external_newsqa = pd.read_csv(f'{input_path}quoref/newsqa_tamil_formated.csv')
+            external_newsqa['language'] = 'tamil'
+            assert 'id' in external_newsqa.columns
+            to_ret.append(external_newsqa)
+
+    to_ret = pd.concat(to_ret)
+
+    return to_ret
+
+
 
 def get_data_kfold_split(config):
 

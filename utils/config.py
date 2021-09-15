@@ -47,6 +47,12 @@ default_train_config = {
     'STRIDE':0,
     'USE_QUOREF':False,
 
+    #data-similarity sampling
+    'SIMILARIY_EMBED_MODEL':"paraphrase-multilingual-mpnet-base-v2",  # https://www.sbert.net/docs/pretrained_models.html#multi-lingual-models
+    'SIM_SAMPLE_DATASETS':{'MLQA', "XQUAD","QUOREF","NEWSQA"},
+    'SIM_SAMPLE_RATIO':1.0,
+    'SIM_SAMPLE_BY_LANG':True,
+
 
     #model
     'TOKENIZER':None,
