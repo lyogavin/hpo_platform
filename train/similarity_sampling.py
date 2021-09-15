@@ -99,6 +99,7 @@ def get_similarity_sample(df_base, config, from_sample=None):
 if __name__ == "__main__":
 
     TEST_COVERAGE_ONLY = True
+    TEST=False
 
     config = TrainingConfig({'SIM_SAMPLE_DATASETS': {'MLQA', "XQUAD"},
                              'SIMILARIY_EMBED_MODEL': 'multi-qa-MiniLM-L6-cos-v1',
@@ -142,7 +143,6 @@ if __name__ == "__main__":
             assert (df_from['similarity'] > df_from.loc[ids[-1]]['similarity']).sum() < 5
 
         # test distribution...
-        TEST=False
         if TEST:
             df = get_similarity_sample(df_from.sample(frac=0.5), config)
         else:
