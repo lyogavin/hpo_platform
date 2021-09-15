@@ -111,12 +111,14 @@ def gen_sim_sample_and_dump(config):
     os.makedirs(f'{config["DATA_ROOT_PATH"]}/sim_sample_cache', exist_ok=True)
 
     save_file = f"similarity_sampling_{int(time.time())}"
-    sample_df.to_csv(f'{config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.csv', index=False)
+    csv_file = f'{config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.csv'
+    pickle_file = f'{config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.pickle'
+    sample_df.to_csv(csv_file, index=False)
 
-    with open(f'{config["DATA_ROOT_PATH"]}/sim_sample_cache/{save_file}.pickle', "wb") as f:
+    with open(pickle_file, "wb") as f:
         pickle.dump(sim_sample_conf, f)
 
-    print(f"files dumped:\n {config['DATA_ROOT_PATH']}/sim_sample_cache/{save_file}.csv}\n{config['DATA_ROOT_PATH']}/sim_sample_cache/{save_file}.pickle")
+    print(f"files dumped:\n{csv_file}\n{pickle_file}")
 
 
 
