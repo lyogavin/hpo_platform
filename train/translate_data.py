@@ -16,7 +16,8 @@ import os
 # en2indic_model = Model(expdir='/kaggle/working/en-indic')
 # en2indic_model
 
-root_path = '/content/drive/MyDrive/chaii/enhance_datasets/'
+#root_path = '/content/drive/MyDrive/chaii/enhance_datasets/'
+root_path = '/home/gavin_li/redspot_home/input/'
 
 #data_to_load = '/content/drive/MyDrive/chaii/enhance_datasets/quoref.csv'
 data_to_load = f'{root_path}newsqa.csv'
@@ -82,12 +83,8 @@ def batched_translate(input_file, output_file):
                 # translate batch
 
                 for iretry in range(5):
-                    os.system('joint_translate_updated.sh')
-                    {input_file}.
-                    {tmp_file_no}.tmp.txt
-                    {output_file}.
-                    {tmp_file_no}.tmp.txt
-                    "en" "ta" '../en-indic'
+                    os.system(f'joint_translate_updated.sh {input_file}.{tmp_file_no}.tmp.txt {output_file}.{tmp_file_no}.tmp.txt en ta ../en-indic')
+
                     if get_file_lines(f'{output_file}.{tmp_file_no}.tmp.txt') > 0:
                         break
                     else:
