@@ -315,6 +315,23 @@ def get_data_kfold_split(config):
         external_quoref['language'] = 'tamil'
         external_train = external_train.append(external_quoref)
 
+
+    if config['USE_SIM_SAMPLE'] is not None:
+        external_train = pd.read_csv(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.csv')
+        import pickle
+        # assert sim sample config match cache...
+        with open(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.csv', 'r') as cf:
+            cache_config = pickle.load(cf)
+
+        for k,v in cache_config.items():
+            assert v == config[k], f"sim sample config key {k}:{v} should match current config:{config[k]}"
+
+        # calculate coverage:
+        df_sim_sample_from = get_datasets(config, config['SIM_SAMPLE_DATASETS'])
+        logging.info(f"using similarity cache: {config['USE_SIM_SAMPLE']}")
+        logging.info(f"similarity sampling covers: {df_sim_sample_from.index.isin(external_train.index.values).mean()}")
+
+
     if config['TEST_RUN']:
         train = train.sample(n=100)
         external_train = external_train.sample(n=100)

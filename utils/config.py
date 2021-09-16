@@ -54,6 +54,7 @@ default_train_config = {
     'TOKENIZER_PADDING':None,
     'STRIDE':0,
     'USE_QUOREF':False,
+    'USE_SIM_SAMPLE':None,
 
 
 
