@@ -321,7 +321,6 @@ def get_data_kfold_split(config):
         import pickle
         # assert sim sample config match cache...
 
-        print(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.pickle')
         with open(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.pickle', 'rb') as cf:
             cache_config = pickle.load(cf)
 
