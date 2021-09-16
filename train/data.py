@@ -320,8 +320,9 @@ def get_data_kfold_split(config):
         external_train = pd.read_csv(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.csv')
         import pickle
         # assert sim sample config match cache...
+
         with open(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.pickle', 'rb') as cf:
-            print(cf)
+            print(f'{input_path}sim_sample_cache/{config["USE_SIM_SAMPLE"]}.pickle')
             cache_config = pickle.load(cf)
 
         for k,v in cache_config.items():
