@@ -101,9 +101,10 @@ def save_training_config(config, save_dir):
     config_tosave = copy.copy(config)
     
     #config_tosave['TOKENIZER'] = str(config['TOKENIZER'])
-    with open(f'{save_dir}/training_config.json', 'w') as f:
-        json.dump(config_tosave.config, f)
-    logging.info(f"config saved in {save_dir}/training_config.json")
+    import pickle
+    with open(f'{save_dir}/training_config.pickle', 'wb') as f:
+        pickle.dump(config_tosave.config, f)
+    logging.info(f"config saved in {save_dir}/training_config.pickle")
 
 
 def unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
