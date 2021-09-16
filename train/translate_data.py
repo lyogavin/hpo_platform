@@ -1,3 +1,5 @@
+from __future__ import unicode_literals, print_function
+
 from fairseq import checkpoint_utils, distributed_utils, options, tasks, utils
 from mosestokenizer import *
 from indicnlp.tokenize import sentence_tokenize
@@ -5,7 +7,6 @@ from indicnlp.tokenize import sentence_tokenize
 # this import might not work without restarting runtime (just restart (clear outputs) and then execute this cell only)
 from fairseq import checkpoint_utils, distributed_utils, options, tasks, utils
 
-from __future__ import unicode_literals, print_function
 from spacy.lang.en import English
 from transformers import AutoTokenizer
 import os
