@@ -82,7 +82,7 @@ def batched_translate(input_file, output_file):
                 # translate batch
 
                 for iretry in range(5):
-                    !./ joint_translate_updated.sh
+                    os.system('joint_translate_updated.sh')
                     {input_file}.
                     {tmp_file_no}.tmp.txt
                     {output_file}.
@@ -157,7 +157,7 @@ def split_tans_then_combine(to_split_file, output_file):
       f_ptr.write(f'{sent}\n')
     os.fsync(f_ptr)
 
-  !wc -l splitted_{to_split_file}
+  #!wc -l splitted_{to_split_file}
 
   tmp_file_no = batched_translate(f"splitted_{to_split_file}", f"splitted_{output_file}")
 
