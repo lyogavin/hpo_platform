@@ -77,7 +77,8 @@ TEST_MODE = False
 
 # set up logging:
 
-
+import os
+import pickle
 import sys
 sys.path.append('../')
 
@@ -214,7 +215,13 @@ def pred_df(df, pretrain_base_path, nbest=False):
             pretrain_paths.append(path_in_str)
     pretrain_paths.sort()
 
-    config = TrainingConfig(json.load(open(f'{pretrain_paths[0]}/training_config.json')))
+    if os.path.exists(f'{pretrain_paths[0]}/training_config.pickle'):
+        with open(f'{pretrain_paths[0]}/training_config.pickle', "rb") as input_file:
+            conf_dict = pickle.load(input_file)
+
+        config = TrainingConfig(conf_dict)
+    else:
+        config = TrainingConfig(json.load(open(f'{pretrain_paths[0]}/training_config.json')))
 
     
     if 'SEED' in config:
@@ -245,7 +252,13 @@ def pred_df(df, pretrain_base_path, nbest=False):
         model_class = getattr(model_import, config['MODEL_CLASS'])
         
         # hardcode upload fix:
-        model_config = TrainingConfig(json.load(open(f'{p}/training_config.json')))
+        if os.path.exists(f'{p}/training_config.pickle'):
+            with open(f'{p}/training_config.pickle', "rb") as input_file:
+                conf_dict = pickle.load(input_file)
+
+            model_config = TrainingConfig(conf_dict)
+        else:
+            model_config = TrainingConfig(json.load(open(f'{p}/training_config.json')))
 
         logging.info(f"loading model class:{config['MODEL_CLASS']}\n pretrain: {str(p)}, config:{model_config}")
       
@@ -464,10 +477,17 @@ def gen_multi_submission(tss, config, TEST_ON_TRAINING=True, ensemble_func = ave
     for ts in tss:
         upload_dir = get_upload_dir(ts)
         if in_private_env:
-            
-            config = json.load(open(f'crp/data/{upload_dir}/model_2/training_config.json'))
+            conf_path = f'crp/data/{upload_dir}/model_2/'
         else:
-            config = json.load(open(f'../input/{upload_dir}/model_2/training_config.json'))
+            conf_path = f'../input/{upload_dir}/model_2/'
+
+        if os.path.exists(f'{conf_path}/training_config.pickle'):
+            with open(f'{conf_path}/training_config.pickle', "rb") as input_file:
+                conf_dict = pickle.load(input_file)
+
+            config = TrainingConfig(conf_dict)
+        else:
+            config = json.load(open(f'{conf_path}/training_config.json'))
 
         
         if TEST_ON_TRAINING:
