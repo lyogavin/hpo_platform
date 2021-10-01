@@ -255,6 +255,8 @@ def get_stratified_col(train):
 def get_train_and_test_df(root_path='../input/'):
     input_path = root_path
 
+    print(f'loading {input_path}chaii-hindi-and-tamil-question-answering/train.csv')
+
     train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
     test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
     return train, test
