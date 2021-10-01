@@ -57,7 +57,7 @@ run_ts = int(time.time())
 os.makedirs('./logs', exist_ok=True)
 logging_file_path = f"./logs/training_log_{run_ts}.log"
 
-
+print(f"logging to {logging_file_path}")
 handlers=[
     import_logging.FileHandler(logging_file_path),
     import_logging.StreamHandler(sys.stdout)

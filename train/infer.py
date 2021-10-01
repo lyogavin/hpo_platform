@@ -399,6 +399,9 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
     pretrain_base_path = f"{output_base_path}/pretrained-{saving_ts}"
 
     current_ts = int(time.time())
+
+    os.makedirs(f"{output_base_path}/inter_outputs", exist_ok=True)
+
     output_path = f"{output_base_path}/inter_outputs/inter_outputs-{str_train}-{current_ts}.pkl"
     #gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
 
@@ -408,7 +411,7 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
     with open(output_path, "wb") as fp:   #Pickling
         pickle.dump([start_logits, end_logits], fp)
 
-        print(f"saved {output_path}")
+        logging.info(f"saved {output_path}")
 
 
 def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
