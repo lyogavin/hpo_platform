@@ -202,7 +202,7 @@ from pathlib import Path
 
 
     
-def pred_df(df, pretrain_base_path, nbest=False):
+def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
     # get config from pretrain path first...
     pretrain_paths = []
 
@@ -303,13 +303,18 @@ def pred_df(df, pretrain_base_path, nbest=False):
 
     df['PredictionString'] = df['id'].map(preds)
 
+
     if not nbest:
-        return df
+
+        ret_df = df
     else:
         df['PredictionStringNBest'] = df['id'].map(preds_nbest)
-        return preds_nbest
+        ret_df = preds_nbest
 
-
+    if not return_logits:
+        return ret_df
+    else:
+        return ret_df, start_logits.tolist(), end_logits.tolist()
 # In[ ]:
 
 from sklearn.metrics import mean_squared_error
@@ -385,6 +390,23 @@ def download_saving(url, saving_ts):
         zip_ref.extractall(f"./saved_training/pretrained-{saving_ts}")
 
     os.remove(downloaded_file)
+
+
+def infer_and_save_inter_outputs(saving_ts, base_path, use_train=True, output_logits=True):
+    train, test = get_train_and_test_df()
+    str_train = 'train' if use_train else 'test'
+
+    pretrain_base_path = f"{base_path}/pretrained-{saving_ts}"
+
+    current_ts = int(time.time())
+    output_path = f"{base_path}/inter_outputs-{str_train}-{current_ts}.pkl"
+    #gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
+
+    res_df, start_logits, end_logits = pred_df(train if use_train else test,
+                                               pretrain_base_path,
+                                               return_logits=output_logits)
+    with open(output_path, "wb") as fp:   #Pickling
+        pickle.dump([start_logits, end_logits], fp)
 
 
 def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
