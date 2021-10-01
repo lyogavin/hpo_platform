@@ -408,6 +408,8 @@ def infer_and_save_inter_outputs(saving_ts, base_path, use_train=True, output_lo
     with open(output_path, "wb") as fp:   #Pickling
         pickle.dump([start_logits, end_logits], fp)
 
+        print(f"saved {output_path}")
+
 
 def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
 
