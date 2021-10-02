@@ -295,11 +295,11 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
     if not nbest:
         preds = postprocess_qa_predictions(tokenizer, features,
                                            start_logits.tolist(),
-                                           end_logits.tolist())
+                                           end_logits.tolist(), use_char_model=config['USE_CHAR_MODEL'])
     else:
         preds, preds_nbest = postprocess_qa_predictions(tokenizer, features,
                                            start_logits.tolist(),
-                                           end_logits.tolist(), return_nbest=True)
+                                           end_logits.tolist(), return_nbest=True, use_char_model=config['USE_CHAR_MODEL'])
 
     df['PredictionString'] = df['id'].map(preds)
 
@@ -314,7 +314,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
     if not return_logits:
         return ret_df
     else:
-        return ret_df, start_logits.tolist(), end_logits.tolist()
+        return ret_df, start_logits.tolist(), end_logits.tolist(), features
 # In[ ]:
 
 from sklearn.metrics import mean_squared_error
@@ -405,13 +405,36 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
     output_path = f"{output_base_path}/inter_outputs/inter_outputs-{str_train}-{current_ts}.pkl"
     #gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
 
-    res_df, start_logits, end_logits = pred_df(train if use_train else test,
+    res_df, start_logits, end_logits, features = pred_df(train if use_train else test,
                                                pretrain_base_path,
                                                return_logits=output_logits)
-    with open(output_path, "wb") as fp:   #Pickling
-        pickle.dump([start_logits, end_logits], fp)
 
-        logging.info(f"saved {output_path}")
+    id_mapping_to_logits = []
+
+    features_per_example = collections.defaultdict(list)
+    for i, feature in enumerate(features):
+        if 'example_id' in feature:
+            features_per_example[feature["example_id"]].append(i)
+        else:
+            assert 'id' in feature
+            features_per_example[feature["id"]].append(i)
+
+    for i, row in train.iterrows():
+        #for example_id, features_indice in features_per_example.items():
+        features_indice = features_per_example[row['id']]
+        mapping_to_logits = []
+
+        context = features[features_indice[0]]['context'] if len(features_indice) > 0 else None
+        for feature_index in features_indice:
+            start_logits = start_logits[feature_index]
+            end_logits = end_logits[feature_index]
+            mapping_to_logits.append((features[feature_index]["offset_mapping"], start_logits, end_logits))
+        id_mapping_to_logits.append(mapping_to_logits)
+
+    train['mapping_to_logits'] = id_mapping_to_logits
+
+    train.to_pickle(output_path)
+    logging.info(f"saved {output_path}")
 
 
 def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):

@@ -149,12 +149,12 @@ class AccumulateMeter(object):
     def get_features_count(self):
         return len(self.features)
 
-    def get_metrics(self, tokenzier):
+    def get_metrics(self, tokenzier, config):
         if len(self.features) == 0:
             return {}, False, self.last_best
 
         try:
-            res = get_metrics(self.features, tokenzier, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)
+            res = get_metrics(self.features, tokenzier, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends, config)
         except Exception as e:
             logging.info(f"exception getting metric for: {(self.features, self.pred_starts, self.pred_ends, self.target_starts, self.target_ends)}")
             raise e
@@ -173,7 +173,7 @@ def jaccard(str1, str2):
         return 0
     return float(len(c)) / (len(a) + len(b) - len(c))
 
-def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, target_ends):
+def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, target_ends, config):
     metrics = ['loss', 'jaccard']
 
     res_dict = {}
@@ -188,7 +188,7 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
             logging.debug(f"post process for {[x['start_position'] for x in features]}")
             logging.debug(f"post process for {[x['end_position'] for x in features]}")
             logging.debug(f"post process for {pred_starts}-{pred_ends}")
-            text_predictions = postprocess_qa_predictions(tokenzier, features, pred_starts, pred_ends)
+            text_predictions = postprocess_qa_predictions(tokenzier, features, pred_starts, pred_ends, use_char_model=config['USE_CHAR_MODEL'])
             logging.debug(f"text predictions: {text_predictions}")
             example_id_to_answers = {}
             for feat in features:

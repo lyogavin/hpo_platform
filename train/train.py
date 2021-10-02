@@ -266,10 +266,10 @@ def train_fn(data_loader, valid_loader,
             last_train_eval_step = step
 
             with train_steps_metrics_timer:
-                train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer)
+                train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer, config)
             with total_train_metrics_timer:
                 if train_steps_meter.get_features_count() != train_total_meter.get_features_count():
-                    train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer)
+                    train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer, config)
                 else:
                     train_total_metrics, train_total_is_best, train_total_last_best = train_steps_metrics, train_steps_is_best, train_steps_last_best
 
@@ -353,7 +353,7 @@ def eval(data_loader, model, device, config, previous_best, tokenizer):
         #rmse, low, high = bootstrap_rmse(fin_outputs, fin_targets, low_high=True)
 
         # get metrics for val:
-        metrics, is_best, last_best = meter.get_metrics(tokenizer)
+        metrics, is_best, last_best = meter.get_metrics(tokenizer, config)
         
     return metrics, is_best, last_best
 

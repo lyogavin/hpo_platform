@@ -150,7 +150,11 @@ def prepare_train_features(config, example, tokenizer):
         sample_index = sample_mapping[i]
         answers = example["answer_text"]
 
-        if False: #len(example["answer_start"]) == 0:
+        if config['USE_CHAR_MODEL'] is not None:
+            feature["start_position"] = example["answer_start"]
+            feature["end_position"] = start_char + len(example["answer_text"])
+
+        elif False: #len(example["answer_start"]) == 0:
             feature["start_position"] = cls_index
             feature["end_position"] = cls_index
         else:
@@ -303,7 +307,13 @@ def get_data_kfold_split(config):
     input_path = config['DATA_ROOT_PATH']
 
     train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
+
+    if config['USE_CHAR_MODEL']:
+        train = pd.read_csv(config['CHAR_PROBS_FILE'])
+
     test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
+
+
     external_mlqa = pd.read_csv(f'{input_path}mlqa-hindi-processed/mlqa_hindi.csv')
     # add id:
     external_mlqa['id'] = [f"mlqa_{x}" for x in external_mlqa.index.values]
@@ -334,6 +344,10 @@ def get_data_kfold_split(config):
         logging.info(f"using similarity cache: {config['USE_SIM_SAMPLE']}")
         logging.info(f"similarity sampling covers: {df_sim_sample_from.index.isin(external_train.index.values).mean()}")
 
+    # if USE_CHAR_MODEL, we only use train as we try to learn how they determine char positions
+    if config['USE_CHAR_MODEL']:
+        external_train = external_train.sample(n=0)
+
 
     if config['TEST_RUN']:
         train = train.sample(n=100)
@@ -349,7 +363,7 @@ def get_data_kfold_split(config):
                       random_state=config['SEED'],
                       shuffle=True)
 
-    if config['USE_TRAIN_AS_TEST']:
+    if config['USE_TRAIN_AS_TEST'] and not config['USE_CHAR_MODEL']:
         external_len = len(external_train)
         train_len = len(train)
         train = external_train.append(train).reset_index(drop=True)
@@ -604,7 +618,8 @@ def post_cleanup(context, pred):
 def postprocess_qa_predictions(tokenizer, features,
                                all_start_logits, all_end_logits,
                                n_best_size=20, max_answer_length=30,
-                               return_nbest = False):
+                               return_nbest = False,
+                               use_char_model = False):
     features_per_example = collections.defaultdict(list)
     for i, feature in enumerate(features):
         if 'example_id' in feature:
@@ -630,57 +645,65 @@ def postprocess_qa_predictions(tokenizer, features,
             start_logits = all_start_logits[feature_index]
             end_logits = all_end_logits[feature_index]
 
-            sequence_ids = features[feature_index]["sequence_ids"]
-            context_index = 1
-            logging.debug(f"{example_id} offset_mapping: {features[feature_index]['offset_mapping']}")
+            if use_char_model:
+                start_char = np.argmax(start_logits)
+                end_char = np.argmax(end_logits)
+                predictions[example_id] = context[start_char: end_char]
+            else:
 
-            features[feature_index]["offset_mapping"] = [
-                (o if sequence_ids[k] == context_index else None)
-                for k, o in enumerate(features[feature_index]["offset_mapping"])
-            ]
-            offset_mapping = features[feature_index]["offset_mapping"]
-            cls_index = features[feature_index]["input_ids"].index(tokenizer.cls_token_id)
-            feature_null_score = start_logits[cls_index] + end_logits[cls_index]
-            if min_null_score is None or min_null_score < feature_null_score:
-                min_null_score = feature_null_score
 
-            start_indexes = np.argsort(start_logits)[-1: -n_best_size - 1: -1].tolist()
-            end_indexes = np.argsort(end_logits)[-1: -n_best_size - 1: -1].tolist()
-            for start_index in start_indexes:
-                for end_index in end_indexes:
-                    logging.debug(f"for {example_id} considering: {start_index} - {end_index}")
-                    logging.debug(f"offset_mapping: {offset_mapping}")
-                    if (
-                            start_index >= len(offset_mapping)
-                            or end_index >= len(offset_mapping)
-                            or offset_mapping[start_index] is None
-                            or offset_mapping[end_index] is None
-                    ):
-                        continue
-                    # Don't consider answers with a length that is either < 0 or > max_answer_length.
-                    if end_index < start_index or end_index - start_index + 1 > max_answer_length:
-                        continue
-                    start_char = offset_mapping[start_index][0]
-                    end_char = offset_mapping[end_index][1]
-                    valid_answers.append(
-                        {
-                            "score": start_logits[start_index] + end_logits[end_index],
-                            "text": context[start_char: end_char]
-                        }
-                    )
-                    logging.debug(f"found: {context[start_char: end_char]}")
+                sequence_ids = features[feature_index]["sequence_ids"]
+                context_index = 1
+                logging.debug(f"{example_id} offset_mapping: {features[feature_index]['offset_mapping']}")
 
-        # post cleanup
-        for i in range(len(valid_answers)):
-            valid_answers[i]['text'] = post_cleanup(context, valid_answers[i]['text'])
+                features[feature_index]["offset_mapping"] = [
+                    (o if sequence_ids[k] == context_index else None)
+                    for k, o in enumerate(features[feature_index]["offset_mapping"])
+                ]
+                offset_mapping = features[feature_index]["offset_mapping"]
+                cls_index = features[feature_index]["input_ids"].index(tokenizer.cls_token_id)
+                feature_null_score = start_logits[cls_index] + end_logits[cls_index]
+                if min_null_score is None or min_null_score < feature_null_score:
+                    min_null_score = feature_null_score
 
-        if len(valid_answers) > 0:
-            best_answer = sorted(valid_answers, key=lambda x: x["score"], reverse=True)[0]
-        else:
-            best_answer = {"text": "", "score": 0.0}
+                start_indexes = np.argsort(start_logits)[-1: -n_best_size - 1: -1].tolist()
+                end_indexes = np.argsort(end_logits)[-1: -n_best_size - 1: -1].tolist()
+                for start_index in start_indexes:
+                    for end_index in end_indexes:
+                        logging.debug(f"for {example_id} considering: {start_index} - {end_index}")
+                        logging.debug(f"offset_mapping: {offset_mapping}")
+                        if (
+                                start_index >= len(offset_mapping)
+                                or end_index >= len(offset_mapping)
+                                or offset_mapping[start_index] is None
+                                or offset_mapping[end_index] is None
+                        ):
+                            continue
+                        # Don't consider answers with a length that is either < 0 or > max_answer_length.
+                        if end_index < start_index or end_index - start_index + 1 > max_answer_length:
+                            continue
+                        start_char = offset_mapping[start_index][0]
+                        end_char = offset_mapping[end_index][1]
+                        valid_answers.append(
+                            {
+                                "score": start_logits[start_index] + end_logits[end_index],
+                                "text": context[start_char: end_char]
+                            }
+                        )
+                        logging.debug(f"found: {context[start_char: end_char]}")
 
-        predictions[example_id] = best_answer["text"]
-        predictions_nbest[example_id] = valid_answers
+        if not use_char_model:
+            # post cleanup
+            for i in range(len(valid_answers)):
+                valid_answers[i]['text'] = post_cleanup(context, valid_answers[i]['text'])
+
+            if len(valid_answers) > 0:
+                best_answer = sorted(valid_answers, key=lambda x: x["score"], reverse=True)[0]
+            else:
+                best_answer = {"text": "", "score": 0.0}
+
+            predictions[example_id] = best_answer["text"]
+            predictions_nbest[example_id] = valid_answers
 
     if return_nbest:
         return predictions, predictions_nbest

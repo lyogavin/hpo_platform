@@ -55,6 +55,7 @@ default_train_config = {
     'STRIDE':0,
     'USE_QUOREF':False,
     'USE_SIM_SAMPLE':None,
+    'CHAR_PROBS_FILE':None,
 
 
 
@@ -65,6 +66,7 @@ default_train_config = {
     'PRETRAIN_TO_LOAD':None,
     'HEAD_DROPOUT':None,
     'BERT_PATH':None,
+    'USE_CHAR_MODEL':None,
 
 
     #train
