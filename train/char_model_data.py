@@ -163,21 +163,11 @@ class CharDataset(Dataset):
         for i, p in df.iterrows():
             mapping, starts, ends = p['mapping_to_logits']
             for map, start, end in zip(mapping, starts, ends):
-                self.start_probas[i, map[0]:map[1]+1]
-                len_ = min(len(p['context']), max_len)
-                self.start_probas[i, :len_] = p[:len_]
+                if map[0] < max_len:
+                    self.start_probas[i, map[0]:min(map[1]+1, max_len)] = start
+                    self.end_probas[i, map[0]:min(map[1]+1, max_len)] = end
 
-        self.end_probas = np.zeros((len(df), max_len, n_models), dtype=float)
-        for i, p in enumerate(end_probas):
-            len_ = min(len(p), max_len)
-            self.end_probas[i, :len_] = p[:len_]
-
-        self.sentiments_list = ['positive', 'neutral', 'negative']
-
-        self.texts = df['text'].values
-        self.selected_texts = df['selected_text'].values if train else [''] * len(df)
-        self.sentiments = df['sentiment'].values
-        self.sentiments_input = [self.sentiments_list.index(s) for s in self.sentiments]
+        self.texts = df['context'].values
 
         # Targets
         self.seg_label = np.zeros((len(df), max_len))
