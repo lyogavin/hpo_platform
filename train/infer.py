@@ -132,7 +132,7 @@ from pathlib import Path
 import distutils
 
 # for debug...
-printed_debug_info = True
+printed_debug_info = False
 
 def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     global printed_debug_info
