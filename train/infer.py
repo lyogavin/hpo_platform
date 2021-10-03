@@ -392,7 +392,7 @@ def download_saving(url, saving_ts):
     os.remove(downloaded_file)
 
 
-def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, use_train=True, output_logits=True):
+def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, use_train=True, output_logits=True, test_mode=False):
     train, test = get_train_and_test_df(input_base_path)
     str_train = 'train' if use_train else 'test'
 
@@ -404,6 +404,10 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
 
     output_path = f"{output_base_path}/inter_outputs/inter_outputs-{str_train}-{current_ts}.pkl"
     #gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
+
+    if test_mode:
+        train = train.sample(n=100)
+        test = test.sample(n=100)
 
     res_df, start_logits, end_logits, features = pred_df(train if use_train else test,
                                                pretrain_base_path,
