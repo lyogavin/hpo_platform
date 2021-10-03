@@ -413,6 +413,7 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
                                                return_logits=output_logits)
 
     if test_mode:
+        logging.info(f"logits count: {len(start_logits)}")
         logging.info(f"logits: {[len(x[0]) if isinstance(x[0], list) else 0 for x in start_logits]}, "
                      f"{[len(x[1]) if isinstance(x[0], list) else 0  for x in start_logits]}")
 

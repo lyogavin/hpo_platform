@@ -160,6 +160,7 @@ class CharDataset(Dataset):
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
         self.start_probas = np.zeros((len(df), max_len, n_models), dtype=float)
+        self.end_probas = np.zeros((len(df), max_len, n_models), dtype=float)
         for i, p in df.iterrows():
             mapping, starts, ends = p['mapping_to_logits']
             for map, start, end in zip(mapping, starts, ends):
