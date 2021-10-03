@@ -413,7 +413,7 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
                                                return_logits=output_logits)
 
     if test_mode:
-        print(f"logits: {start_logits}, {end_logits}\nfeatures: {features}")
+        logging.info(f"logits: {start_logits}, {end_logits}\nfeatures: {features}")
 
     id_mapping_to_logits = []
 

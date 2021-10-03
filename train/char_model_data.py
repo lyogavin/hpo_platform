@@ -152,15 +152,20 @@ class DatasetRetriever(Dataset):
 
 
 class CharDataset(Dataset):
-    def __init__(self, df, X, start_probas, end_probas, n_models=1, max_len=150, train=True):
+    def __init__(self, df, n_models=1, max_len=150, train=True):
         self.max_len = max_len
+        X = df['context']
+        #start_probas, end_probas
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
         self.start_probas = np.zeros((len(df), max_len, n_models), dtype=float)
-        for i, p in enumerate(start_probas):
-            len_ = min(len(p), max_len)
-            self.start_probas[i, :len_] = p[:len_]
+        for i, p in df.iterrows():
+            mapping, starts, ends = p['mapping_to_logits']
+            for map, start, end in zip(mapping, starts, ends):
+                self.start_probas[i, map[0]:map[1]+1]
+                len_ = min(len(p['context']), max_len)
+                self.start_probas[i, :len_] = p[:len_]
 
         self.end_probas = np.zeros((len(df), max_len, n_models), dtype=float)
         for i, p in enumerate(end_probas):
