@@ -152,9 +152,8 @@ class DatasetRetriever(Dataset):
 
 
 class CharDataset(Dataset):
-    def __init__(self, df, n_models=1, max_len=150, train=True):
+    def __init__(self, df, X, n_models=1, max_len=150, train=True):
         self.max_len = max_len
-        X = df['context']
         self.df = df
         #start_probas, end_probas
 
@@ -208,18 +207,11 @@ def char_model_make_loader(
 
     train_set, valid_set = data.loc[split_output[fold][0]], data.loc[split_output[fold][1]]
 
-    X_train = tokenizer.texts_to_sequences(df_train['text'].values)
-    X_test = tokenizer.texts_to_sequences(df_test['text'].values)
+    X_train = tokenizer.texts_to_sequences(data['context'].values)
+    X_test = tokenizer.texts_to_sequences(data['context'].values)
 
-
-    train_features, valid_features = [[] for _ in range(2)]
-    for i, row in train_set.iterrows():
-        train_features += prepare_train_features(config, row, tokenizer)
-    for i, row in valid_set.iterrows():
-        valid_features += prepare_train_features(config, row, tokenizer)
-
-    train_dataset = DatasetRetriever(train_features)
-    valid_dataset = DatasetRetriever(valid_features)
+    train_dataset = CharDataset(data, X_train)
+    valid_dataset = CharDataset(data, X_test)
     logging.info(f"Num examples Train= {len(train_dataset)}, Num examples Valid={len(valid_dataset)}")
 
     train_sampler = RandomSampler(train_dataset)
@@ -254,7 +246,7 @@ def char_model_make_loader(
         drop_last=False
     )
     logging.info(f"loaders created, num steps: train-{len(train_dataloader)}, val-{len(valid_dataloader)}")
-    return train_dataloader, valid_dataloader, train_features, valid_features
+    return train_dataloader, valid_dataloader
 
 def make_test_loader(
         config,
