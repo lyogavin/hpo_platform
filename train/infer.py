@@ -407,11 +407,13 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
 
     if test_mode:
         train = train.sample(n=100)
-        test = test.sample(n=100)
 
     res_df, start_logits, end_logits, features = pred_df(train if use_train else test,
                                                pretrain_base_path,
                                                return_logits=output_logits)
+
+    if test_mode:
+        print(f"logits: {start_logits}, {end_logits}\nfeatures: {features}")
 
     id_mapping_to_logits = []
 
