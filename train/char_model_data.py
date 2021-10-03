@@ -155,6 +155,7 @@ class CharDataset(Dataset):
     def __init__(self, df, n_models=1, max_len=150, train=True):
         self.max_len = max_len
         X = df['context']
+        self.df = df
         #start_probas, end_probas
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
@@ -168,38 +169,32 @@ class CharDataset(Dataset):
                     self.end_probas[i, map[0]:min(map[1]+1, max_len)] = end
 
         self.texts = df['context'].values
+        self.ids = df['id'].values
+        self.questions = df['question']
 
-        # Targets
-        self.seg_label = np.zeros((len(df), max_len))
 
-        if train:
-            self.start_idx = []
-            self.end_idx = []
-            for i, (text, sel_text) in enumerate(zip(df['text'].values, df['selected_text'].values)):
-                start, end = get_start_end_string(text, sel_text.strip())
-                self.start_idx.append(start)
-                self.end_idx.append(end)
-                self.seg_label[i, start:end] = 1
-        else:
-            self.start_idx = [0] * len(df)
-            self.end_idx = [0] * len(df)
 
     def __len__(self):
         return len(self.texts)
 
     def __getitem__(self, idx):
-        return {
-            'ids': torch.tensor(self.X[idx], dtype=torch.long),
-            'probas_start': torch.tensor(self.start_probas[idx]).float(),
-            'probas_end': torch.tensor(self.end_probas[idx]).float(),
-            'target_start': torch.tensor(self.start_idx[idx], dtype=torch.long),
-            'target_end': torch.tensor(self.end_idx[idx], dtype=torch.long),
-            'text': self.texts[idx],
-            'selected_text': self.selected_texts[idx],
-            'sentiment': self.sentiments[idx],
-            'sentiment_input': torch.tensor(self.sentiments_input[idx]),
-            'seg_label': torch.tensor(self.seg_label[idx])
+        to_ret = {}
+        to_ret = {
+            'input_ids': torch.tensor(self.X[idx], dtype=torch.long),
+            #'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
+            #'offset_mapping': torch.tensor(feature['offset_mapping'], dtype=torch.long),
+            #'sequence_ids': torch.tensor(feature['sequence_ids'], dtype=torch.long),
+            'id': self.df[idx]['id'],
+            'context': self.df[idx]['context'],
+            'question': self.df[idx]['question'],
+            # 'features_index':item
         }
+        if 'start_position' in self.df.columns:
+            to_ret['start_position'] = torch.tensor(self.df[idx]['start_position'], dtype=torch.long)
+            to_ret['end_position'] = torch.tensor(self.df[idx]['end_position'], dtype=torch.long)
+            to_ret['answer_text'] = self.df[idx]['answer_text']
+
+        return to_ret
 
 def char_model_make_loader(
         config,
