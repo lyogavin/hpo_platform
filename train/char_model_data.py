@@ -188,6 +188,8 @@ class CharDataset(Dataset):
             'context': self.df[idx]['context'],
             'question': self.df[idx]['question'],
             # 'features_index':item
+            'start_probs': torch.tensor(self.start_probas[idx]).float(),
+            'end_probs': torch.tensor(self.end_probs[idx]).float(),
         }
         if 'start_position' in self.df.columns:
             to_ret['start_position'] = torch.tensor(self.df[idx]['start_position'], dtype=torch.long)
@@ -247,7 +249,7 @@ def char_model_make_loader(
         drop_last=False
     )
     logging.info(f"loaders created, num steps: train-{len(train_dataloader)}, val-{len(valid_dataloader)}")
-    return train_dataloader, valid_dataloader
+    return train_dataloader, valid_dataloader, train_set, valid_set, len_voc
 
 def make_test_loader(
         config,

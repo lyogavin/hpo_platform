@@ -85,6 +85,7 @@ sys.path.append('./')
 from utils.utils import *
 from train.loss import *
 from train.data import *
+from train.char_model_data import *
 from train.optimizer import *
 from model.model import *
 from train.metric import *
@@ -110,6 +111,10 @@ import_file_name = 'model'
 model_import = __import__(import_file_name)
 model_import = getattr(model_import, 'model')
 
+char_model_import_file_name = 'model'
+
+char_model_import = __import__(char_model_import_file_name)
+char_model_import = getattr(char_model_import, 'char_model')
 
                 
 import math
@@ -219,7 +224,10 @@ def train_fn(data_loader, valid_loader,
         targets_start, targets_end = d['start_position'].to(device), d['end_position'].to(device)
 
 
-        model_input_keys = ['input_ids', 'attention_mask']
+        if config[''] is None:
+            model_input_keys = ['input_ids', 'attention_mask']
+        else:
+            model_input_keys = ['input_ids', 'start_probas', 'end_probas']
         data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in d.items() if key in model_input_keys}
 
         if GRAD_DESCD_STEP:
@@ -332,7 +340,10 @@ def eval(data_loader, model, device, config, previous_best, tokenizer):
 
             targets_start, targets_end = d['start_position'].to(device), d['end_position'].to(device)
 
-            model_input_keys = ['input_ids', 'attention_mask']
+            if config[''] is None:
+                model_input_keys = ['input_ids', 'attention_mask']
+            else:
+                model_input_keys = ['input_ids', 'start_probas', 'end_probas']
             data = {key: val.reshape(val.shape[0], -1).to(device) for key, val in d.items() if key in model_input_keys}
 
 
@@ -415,7 +426,10 @@ def run(config, import_file_path=None):
 
     for fold, (train_idx,valid_idx) in enumerate(tqdm(split_output, total=len(split_output))):
 
-        train_loader, valid_loader, train_features, valid_features = make_loader(config, data, split_output, tokenizer, fold)
+        if config['USE_CHAR_MODEL'] is not None:
+            train_loader, valid_loader, train_features, valid_features, len_voc = char_model_make_loader(config, data, split_output, tokenizer, fold)
+        else:
+            train_loader, valid_loader, train_features, valid_features = make_loader(config, data, split_output, tokenizer, fold)
             
         if config['RESEED_EVERY_FOLD']:
             seed_everything(config['SEED'] + fold)
@@ -430,6 +444,11 @@ def run(config, import_file_path=None):
 
         
         model_class = getattr(model_import, config['MODEL_CLASS'])
+
+        if config['USE_CHAR_MODEL'] is not None:
+            model_class = getattr(char_model_import, config['USE_CHAR_MODEL'])
+            config['len_voc'] = len_voc
+
 
 
         if config['PRETRAIN_TO_LOAD'] is not None:

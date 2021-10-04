@@ -68,9 +68,11 @@ class Waveblock(nn.Module):
 
 
 class TweetCharModel(nn.Module):
-    def __init__(self, len_voc, use_msd=True,
+    def __init__(self, config, from_pretrain=None, use_msd=True,
                  embed_dim=64, lstm_dim=64, char_embed_dim=32, ft_lstm_dim=32, n_models=1):
         super().__init__()
+        self.config = config
+        len_voc = config['len_voc']
         self.use_msd = use_msd
 
         self.char_embeddings = nn.Embedding(len_voc, char_embed_dim)
@@ -89,13 +91,13 @@ class TweetCharModel(nn.Module):
 
         self.high_dropout = nn.Dropout(p=0.5)
 
-    def forward(self, tokens, start_probas, end_probas):
-        bs, T = tokens.size()
+    def forward(self, input_ids, start_probas, end_probas):
+        bs, T = input_ids.size()
 
         probas = torch.cat([start_probas, end_probas], -1)
         probas_fts, _ = self.proba_lstm(probas)
 
-        char_fts = self.char_embeddings(tokens)
+        char_fts = self.char_embeddings(input_ids)
 
 
         features = torch.cat([char_fts, probas_fts], -1)
@@ -121,10 +123,12 @@ class TweetCharModel(nn.Module):
 
 
 class WaveNet(nn.Module):
-    def __init__(self, len_voc, use_msd=True, dilations=[1],
+    def __init__(self, config, from_pretrain=None, use_msd=True, dilations=[1],
                  cnn_dim=64, char_embed_dim=32, proba_cnn_dim=32, n_models=1, kernel_size=3,
                  use_bn=True):
         super().__init__()
+        self.config = config
+        len_voc = config['len_voc']
         self.use_msd = use_msd
 
         self.char_embeddings = nn.Embedding(len_voc, char_embed_dim)
@@ -148,18 +152,16 @@ class WaveNet(nn.Module):
 
         self.high_dropout = nn.Dropout(p=0.5)
 
-    def forward(self, tokens, start_probas, end_probas):
-        bs, T = tokens.size()
+    def forward(self, input_ids, start_probas, end_probas):
+        bs, T = input_ids.size()
 
         probas = torch.cat([start_probas, end_probas], -1).permute(0, 2, 1)
         probas_fts = self.probas_cnn(probas).permute(0, 2, 1)
 
-        char_fts = self.char_embeddings(tokens)
+        char_fts = self.char_embeddings(input_ids)
 
-        sentiment_fts = self.sentiment_embeddings(sentiment).view(bs, 1, -1)
-        sentiment_fts = sentiment_fts.repeat((1, T, 1))
 
-        x = torch.cat([char_fts, sentiment_fts, probas_fts], -1).permute(0, 2, 1)
+        x = torch.cat([char_fts, probas_fts], -1).permute(0, 2, 1)
 
         features = self.cnn(x).permute(0, 2, 1)  # [Bs x T x nb_ft]
 
@@ -180,10 +182,12 @@ class WaveNet(nn.Module):
 
 
 class ConvNet(nn.Module):
-    def __init__(self, len_voc, use_msd=True,
+    def __init__(self, config, from_pretrain=None, use_msd=True,
                  cnn_dim=64, char_embed_dim=32, proba_cnn_dim=32, n_models=1, kernel_size=3,
                  use_bn=False):
         super().__init__()
+        self.config = config
+        len_voc = config['len_voc']
         self.use_msd = use_msd
 
         self.char_embeddings = nn.Embedding(len_voc, char_embed_dim)
@@ -205,13 +209,13 @@ class ConvNet(nn.Module):
 
         self.high_dropout = nn.Dropout(p=0.5)
 
-    def forward(self, tokens, start_probas, end_probas):
-        bs, T = tokens.size()
+    def forward(self, input_ids, start_probas, end_probas):
+        bs, T = input_ids.size()
 
         probas = torch.cat([start_probas, end_probas], -1).permute(0, 2, 1)
         probas_fts = self.probas_cnn(probas).permute(0, 2, 1)
 
-        char_fts = self.char_embeddings(tokens)
+        char_fts = self.char_embeddings(input_ids)
 
 
         x = torch.cat([char_fts, probas_fts], -1).permute(0, 2, 1)
