@@ -272,7 +272,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
 
         pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer)
 
-        logging.info("infer output: {pred_start.shape}")
+        logging.info(f"infer output: {pred_start.shape}")
 
         if start_logits is None:
             start_logits = pred_start
