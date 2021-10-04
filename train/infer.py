@@ -244,7 +244,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
 
     sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
 
-    logging.info(f"features: {features}")
+    #logging.info(f"features: {features}")
     
     
     start_logits = None
@@ -445,6 +445,7 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
         for feature_index in features_indice:
             start_logit = start_logits[feature_index]
             end_logit = end_logits[feature_index]
+            logging.info(f'offset_mapping: {features[feature_index]["offset_mapping"][0]}')
             mapping_to_logits.append((features[feature_index]["offset_mapping"], start_logit, end_logit))
         id_mapping_to_logits.append(mapping_to_logits)
 
