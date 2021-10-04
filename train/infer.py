@@ -132,11 +132,11 @@ from pathlib import Path
 import distutils
 
 # for debug...
-printed_debug_info = False
+printed_debug_info = True
 
 def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     global printed_debug_info
-    printed_debug_info = False
+    printed_debug_info = True
     model.eval()
     to_ret = {}
     with torch.no_grad():
@@ -271,6 +271,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
         model.to(device)
 
         pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer)
+
+        logging.info("infer output: {pred_start.shape}")
 
         if start_logits is None:
             start_logits = pred_start
