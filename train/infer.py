@@ -425,6 +425,7 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
         logging.info(f"logits count: {len(start_logits)}")
         logging.info(f"logits: {[np.array(x).shape for x in start_logits]}, "
                      f"{[np.array(x).shape for x in start_logits]}")
+        logging.info(f'offset_mapping: {features[0]["offset_mapping"]}')
 
     id_mapping_to_logits = []
 
@@ -445,7 +446,7 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
         for feature_index in features_indice:
             start_logit = start_logits[feature_index]
             end_logit = end_logits[feature_index]
-            logging.info(f'offset_mapping: {features[feature_index]["offset_mapping"][0]}')
+            #logging.info(f'offset_mapping: {features[feature_index]["offset_mapping"][0]}')
             mapping_to_logits.append((features[feature_index]["offset_mapping"], start_logit, end_logit))
         id_mapping_to_logits.append(mapping_to_logits)
 
