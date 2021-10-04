@@ -88,6 +88,7 @@ from train.data import *
 from train.char_model_data import *
 from train.optimizer import *
 from model.model import *
+from model.char_model import *
 from train.metric import *
 from model import model
 from exp_record_store.exp_record import ExpRecord
