@@ -441,9 +441,9 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
 
         context = features[features_indice[0]]['context'] if len(features_indice) > 0 else None
         for feature_index in features_indice:
-            start_logits = start_logits[feature_index]
-            end_logits = end_logits[feature_index]
-            mapping_to_logits.append((features[feature_index]["offset_mapping"], start_logits, end_logits))
+            start_logit = start_logits[feature_index]
+            end_logit = end_logits[feature_index]
+            mapping_to_logits.append((features[feature_index]["offset_mapping"], start_logit, end_logit))
         id_mapping_to_logits.append(mapping_to_logits)
 
     train['mapping_to_logits'] = id_mapping_to_logits
