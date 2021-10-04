@@ -309,7 +309,7 @@ def get_data_kfold_split(config):
     train = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/train.csv')
 
     if config['USE_CHAR_MODEL']:
-        train = pd.read_csv(config['CHAR_PROBS_FILE'])
+        train = pd.read_pickle(config['CHAR_PROBS_FILE'])
 
     test = pd.read_csv(f'{input_path}chaii-hindi-and-tamil-question-answering/test.csv')
 
