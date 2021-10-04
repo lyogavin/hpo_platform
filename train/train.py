@@ -114,6 +114,7 @@ model_import = getattr(model_import, 'model')
 char_model_import_file_name = 'model'
 
 char_model_import = __import__(char_model_import_file_name)
+print(f"all dir in model: {dir(char_model_import)}")
 char_model_import = getattr(char_model_import, 'char_model')
 
                 
