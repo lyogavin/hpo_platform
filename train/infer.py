@@ -136,7 +136,7 @@ printed_debug_info = False
 
 def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     global printed_debug_info
-    printed_debug_info = True
+    printed_debug_info = False
     model.eval()
     to_ret = {}
     with torch.no_grad():
