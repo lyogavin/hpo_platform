@@ -272,7 +272,6 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
 
         pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer)
 
-        logging.info(f"infer output: {pred_start.shape}")
 
         if start_logits is None:
             start_logits = pred_start
@@ -291,12 +290,15 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
         torch.cuda.empty_cache()
         
 
+    logging.info(f"infer output: {start_logits.shape}")
+
     start_logits = start_logits/(len(pretrain_paths))
     end_logits = end_logits/(len(pretrain_paths))
 
     ret_start_logits = start_logits.tolist().copy()
     ret_end_logits = end_logits.tolist().copy()
 
+    logging.info(f"infer output: {ret_start_logits.shape}")
     if not nbest:
         preds = postprocess_qa_predictions(tokenizer, features,
                                            start_logits.tolist(),
@@ -319,6 +321,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
     if not return_logits:
         return ret_df
     else:
+        logging.info(f"infer output: {ret_start_logits.shape}")
         return ret_df, ret_start_logits, ret_end_logits, features
 # In[ ]:
 
