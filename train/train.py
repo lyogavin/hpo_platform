@@ -230,6 +230,9 @@ def train_fn(data_loader, valid_loader,
             model_input_keys = ['input_ids', 'attention_mask']
         else:
             model_input_keys = ['input_ids', 'start_probas', 'end_probas']
+
+            if 'start_probas' not in d.keys():
+                logging.info(f"start_probas missing in d: {d}")
         data = {key:val.reshape(val.shape[0],-1).to(device) for key,val in d.items() if key in model_input_keys}
 
         if GRAD_DESCD_STEP:
