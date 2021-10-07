@@ -319,6 +319,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
         df['PredictionStringNBest'] = df['id'].map(preds_nbest)
         ret_df = preds_nbest
 
+    logging.info(f"features after infer: {features}")
+
     if not return_logits:
         return ret_df
     else:
