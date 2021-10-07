@@ -226,7 +226,7 @@ def train_fn(data_loader, valid_loader,
         targets_start, targets_end = d['start_position'].to(device), d['end_position'].to(device)
 
 
-        if config[''] is None:
+        if config['USE_CHAR_MODEL'] is None:
             model_input_keys = ['input_ids', 'attention_mask']
         else:
             model_input_keys = ['input_ids', 'start_probas', 'end_probas']
