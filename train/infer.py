@@ -310,6 +310,13 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     ret_start_logits = start_logits.tolist().copy()
     ret_end_logits = end_logits.tolist().copy()
 
+    features_none_mapping_count = 0
+    for ft in features:
+        for x in ft['offset_mapping']:
+            if x is None:
+                features_none_mapping_count+=1
+    logging.info(f"count none mapping features before pred: {features_none_mapping_count}")
+
     if not nbest:
         preds = postprocess_qa_predictions(tokenizer, features,
                                            start_logits.tolist(),
