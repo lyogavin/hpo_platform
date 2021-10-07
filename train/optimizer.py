@@ -231,7 +231,7 @@ class Lamb(Optimizer):
 
 def get_optimizer_params(model, config):
     if config['USE_CHAR_MODEL']:
-        return []
+        return [{'params': model.parameters(), 'lr':config['LR']},]
     # differential learning rate and weight decay
     param_optimizer = list(model.named_parameters())
     learning_rate = config['LR']
