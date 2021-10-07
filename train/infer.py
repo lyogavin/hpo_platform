@@ -245,8 +245,12 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
     sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
 
     #logging.info(f"features: {features}")
+    features_none_mapping_count = 0
+    for ft in features:
+        for x in ft['offset_mapping']:
+            if x is None:
+                features_none_mapping_count+=1
 
-    features_none_mapping_count = len([x for x in features if x['offset_mapping'] is None])
     logging.info(f"count none mapping features before infer: {features_none_mapping_count}")
     
     start_logits = None
@@ -322,7 +326,11 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
         ret_df = preds_nbest
 
     #logging.info(f"features after infer: {features}")
-    features_none_mapping_count = len([x for x in features if x['offset_mapping'] is None])
+    features_none_mapping_count = 0
+    for ft in features:
+        for x in ft['offset_mapping']:
+            if x is None:
+                features_none_mapping_count+=1
     logging.info(f"count none mapping features after infer: {features_none_mapping_count}")
 
     if not return_logits:
