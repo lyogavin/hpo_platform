@@ -244,7 +244,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
 
     sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
 
-    #logging.info(f"features: {features}")
+    logging.info(f"features: {features}")
     
     
     start_logits = None
