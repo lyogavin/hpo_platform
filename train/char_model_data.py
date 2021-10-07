@@ -208,6 +208,8 @@ def char_model_make_loader(
     tokenizer.fit_on_texts(data.apply(lambda x: ' '.join([x['context'], x['question'], x['answer_text']]), axis=1).values)
 
     len_voc = len(tokenizer.word_index) + 1
+    data["start_position"] = data["answer_start"]
+    data["end_position"] = data.apply(lambda x: x['start_position'] + len(x["answer_text"]), axis=1)
 
     train_set, valid_set = data.loc[split_output[fold][0]], data.loc[split_output[fold][1]]
 
