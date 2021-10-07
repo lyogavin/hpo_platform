@@ -185,17 +185,17 @@ class CharDataset(Dataset):
             #'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
             #'offset_mapping': torch.tensor(feature['offset_mapping'], dtype=torch.long),
             #'sequence_ids': torch.tensor(feature['sequence_ids'], dtype=torch.long),
-            'id': self.df[idx]['id'],
-            'context': self.df[idx]['context'],
-            'question': self.df[idx]['question'],
+            'id': self.df.iloc[idx]['id'],
+            'context': self.df.iloc[idx]['context'],
+            'question': self.df.iloc[idx]['question'],
             # 'features_index':item
             'start_probs': torch.tensor(self.start_probas[idx]).float(),
             'end_probs': torch.tensor(self.end_probs[idx]).float(),
         }
         if 'start_position' in self.df.columns:
-            to_ret['start_position'] = torch.tensor(self.df[idx]['start_position'], dtype=torch.long)
-            to_ret['end_position'] = torch.tensor(self.df[idx]['end_position'], dtype=torch.long)
-            to_ret['answer_text'] = self.df[idx]['answer_text']
+            to_ret['start_position'] = torch.tensor(self.df.iloc[idx]['start_position'], dtype=torch.long)
+            to_ret['end_position'] = torch.tensor(self.df.iloc[idx]['end_position'], dtype=torch.long)
+            to_ret['answer_text'] = self.df.iloc[idx]['answer_text']
 
         return to_ret
 
