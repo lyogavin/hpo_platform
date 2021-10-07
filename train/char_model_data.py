@@ -164,7 +164,7 @@ class CharDataset(Dataset):
         for i, p in df.iterrows():
             mapping, starts, ends = p['mapping_to_logits']
             for map, start, end in zip(mapping, starts, ends):
-                if map[0] < max_len:
+                if map is not None and map[0] < max_len:
                     self.start_probas[i, map[0]:min(map[1]+1, max_len)] = start
                     self.end_probas[i, map[0]:min(map[1]+1, max_len)] = end
 
