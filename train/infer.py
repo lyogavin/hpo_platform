@@ -202,7 +202,7 @@ from pathlib import Path
 
 
     
-def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
+def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=False):
     # get config from pretrain path first...
     pretrain_paths = []
 
@@ -256,6 +256,9 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
     start_logits = None
     end_logits = None
 
+    if test_mode:
+        pretrain_paths = [pretrain_paths[0]]
+
     for p in pretrain_paths:
         model_class = getattr(model_import, config['MODEL_CLASS'])
         
@@ -296,6 +299,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
         del model
         gc.collect()
         torch.cuda.empty_cache()
+
         
 
     logging.info(f"infer output: {start_logits.shape}")
@@ -332,6 +336,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False):
             if x is None:
                 features_none_mapping_count+=1
     logging.info(f"count none mapping features after infer: {features_none_mapping_count}")
+
+    logging.info(f'offset_mapping: {features[0]["offset_mapping"]}')
 
     if not return_logits:
         return ret_df
@@ -432,7 +438,8 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
 
     res_df, start_logits, end_logits, features = pred_df(train if use_train else test,
                                                pretrain_base_path,
-                                               return_logits=output_logits)
+                                               return_logits=output_logits,
+                                                         test_mode=test_mode)
 
     if test_mode:
         logging.info(f"logits shape: {np.array(start_logits).shape}")
