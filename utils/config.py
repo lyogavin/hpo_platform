@@ -68,6 +68,9 @@ default_train_config = {
     'BERT_PATH':None,
     'USE_CHAR_MODEL':None,
 
+    # char model
+    'len_voc':0,
+
 
     #train
     'GRAD_ACCU_STEPS':1,
