@@ -94,7 +94,7 @@ class TweetCharModel(nn.Module):
     def forward(self, input_ids, start_probas, end_probas):
         bs, T = input_ids.size()
 
-        probas = torch.cat([start_probas, end_probas], -1)
+        probas = torch.cat([start_probas.unsqueeze(2), end_probas.unsqueeze(2)], -1)
         probas_fts, _ = self.proba_lstm(probas)
 
         char_fts = self.char_embeddings(input_ids)
