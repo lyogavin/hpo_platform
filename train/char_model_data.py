@@ -154,7 +154,7 @@ class DatasetRetriever(Dataset):
 class CharDataset(Dataset):
     def __init__(self, df, X, n_models=1, max_len=1500, train=True):
         self.max_len = max_len
-        self.df = df
+        self.df = df.copy().reset_index(drop=True)
         #start_probas, end_probas
 
         logging.info(f"filtering based on maxlen: {max_len}, before filter: {len(self.df)}")
