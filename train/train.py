@@ -219,7 +219,7 @@ def train_fn(data_loader, valid_loader,
     total_train_metrics_timer = Timer("train total metrics")
     eval_metrics_timer = Timer("eval metrics")
                     
-    for idx, d in enumerate(data_loader):
+    for idx, d in enumerate(tqdm(data_loader)):
 
         training_timer.start_timer()
 
