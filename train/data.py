@@ -394,6 +394,8 @@ def get_data_kfold_split(config):
 
 
 def optimal_num_of_loader_workers(config):
+    if config['USE_CHAR_MODEL'] is not None:
+        return 1
     if config['FORCE_NUM_LOADER_WORKER'] is not None:
         num_woker = config['FORCE_NUM_LOADER_WORKER']
         logging.info(f"using number of loader worker: {num_woker}")
