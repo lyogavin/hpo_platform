@@ -168,9 +168,9 @@ class CharDataset(Dataset):
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
-        self.start_probas = np.zeros((len(df), max_len, n_models), dtype=float)
-        self.end_probas = np.zeros((len(df), max_len, n_models), dtype=float)
-        for i, p in df.iterrows():
+        self.start_probas = np.zeros((len(self.df), max_len, n_models), dtype=float)
+        self.end_probas = np.zeros((len(self.df), max_len, n_models), dtype=float)
+        for i, p in self.df.iterrows():
             for ft in p['mapping_to_logits']:
                 mapping, starts, ends = ft
                 for map, start, end in zip(mapping, starts, ends):
@@ -178,9 +178,9 @@ class CharDataset(Dataset):
                         self.start_probas[i, map[0]:min(map[1]+1, max_len)] = start
                         self.end_probas[i, map[0]:min(map[1]+1, max_len)] = end
 
-        self.texts = df['context'].values
-        self.ids = df['id'].values
-        self.questions = df['question']
+        self.texts = self.df['context'].values
+        self.ids = self.df['id'].values
+        self.questions = self.df['question']
 
 
 
