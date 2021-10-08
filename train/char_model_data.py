@@ -189,8 +189,8 @@ class CharDataset(Dataset):
             'context': self.df.iloc[idx]['context'],
             'question': self.df.iloc[idx]['question'],
             # 'features_index':item
-            'start_probs': torch.tensor(self.start_probas[idx]).float(),
-            'end_probs': torch.tensor(self.end_probas[idx]).float(),
+            'start_probas': torch.tensor(self.start_probas[idx]).float(),
+            'end_probas': torch.tensor(self.end_probas[idx]).float(),
         }
         if 'start_position' in self.df.columns:
             to_ret['start_position'] = torch.tensor(self.df.iloc[idx]['start_position'], dtype=torch.long)
