@@ -116,13 +116,20 @@ class AccumulateMeter(object):
         self.last_best = None
 
     def reset(self, reset_best=False):
+        del self.features
         self.features = []
-
+        del self.pred_starts
         self.pred_starts = []
+        del self.pred_ends
         self.pred_ends = []
+        del self.target_starts
         self.target_starts = []
+        del self.target_ends
         self.target_ends = []
+        del self.metrics
         self.metrics = {}
+
+        gc.collect()
         if reset_best:
             self.best = None
             self.last_best = None
