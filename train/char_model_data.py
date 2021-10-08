@@ -154,13 +154,15 @@ class DatasetRetriever(Dataset):
 class CharDataset(Dataset):
     def __init__(self, df, X, n_models=1, max_len=1500, train=True):
         self.max_len = max_len
-        self.df = df.copy().reset_index(drop=True)
+        self.df = df.copy()
         #start_probas, end_probas
 
         logging.info(f"filtering based on maxlen: {max_len}, before filter: {len(self.df)}")
 
         self.df = self.df[self.df.start_position < max_len]
         logging.info(f"filtering based on maxlen: {max_len}, after filter: {len(self.df)}")
+
+        self.df = self.df.reset_index(drop=True)
 
         self.df['end_position'] = self.df['end_position'].apply(lambda x: max(x, max_len-1))
 
