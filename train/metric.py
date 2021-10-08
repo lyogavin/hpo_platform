@@ -140,7 +140,8 @@ class AccumulateMeter(object):
         for i in range(len(features['context'])):
             item = {}
             for k in features.keys():
-                item[k] = features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i]
+                if 'probas' not in k:
+                    item[k] = features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i]
             to_extend.append(item)
         for x in to_extend:
             assert 'id' in x, f"{x.keys()} has to have id field"
