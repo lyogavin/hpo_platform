@@ -246,8 +246,8 @@ def train_fn(data_loader, valid_loader,
         else:
             outputs_start, outputs_end = model(**data)
 
-        logging.info(f"shape outputs_start: {outputs_start.shape}")
-        logging.info(f"shape targets_start: {targets_start.shape}")
+        #logging.info(f"shape outputs_start: {outputs_start.shape}")
+        #logging.info(f"shape targets_start: {targets_start.shape}")
         loss = loss_fn((outputs_start, outputs_end), (targets_start, targets_end))
         loss = loss / config['GRAD_ACCU_STEPS']
 

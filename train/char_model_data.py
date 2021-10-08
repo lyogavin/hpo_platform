@@ -157,6 +157,8 @@ class CharDataset(Dataset):
         self.df = df.copy()
         #start_probas, end_probas
 
+        max_len = self.df['start_position'].max()
+
         logging.info(f"filtering based on maxlen: {max_len}, before filter: {len(self.df)}")
 
         self.df = self.df[self.df.start_position < max_len]
