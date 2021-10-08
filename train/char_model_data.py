@@ -152,10 +152,17 @@ class DatasetRetriever(Dataset):
 
 
 class CharDataset(Dataset):
-    def __init__(self, df, X, n_models=1, max_len=150, train=True):
+    def __init__(self, df, X, n_models=1, max_len=1500, train=True):
         self.max_len = max_len
         self.df = df
         #start_probas, end_probas
+
+        logging.info(f"filtering based on maxlen: {max_len}, before filter: {len(self.df)}")
+
+        self.df = self.df[self.df.start_position < max_len]
+        logging.info(f"filtering based on maxlen: {max_len}, after filter: {len(self.df)}")
+
+        self.df['end_position'] = self.df['end_position'].apply(lambda x: max(x, max_len-1))
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
