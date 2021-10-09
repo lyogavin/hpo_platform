@@ -58,7 +58,7 @@ from filelock import FileLock
 
 import os
 # only for debugging, this will block multiple GPU utilization
-#os.environ["CUDA_LAUNCH_BLOCKING"]="1"   # see issue #152
+os.environ["CUDA_LAUNCH_BLOCKING"]="1"   # see issue #152
 
 
 # In[4]:
