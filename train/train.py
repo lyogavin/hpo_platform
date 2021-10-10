@@ -348,7 +348,7 @@ def eval(data_loader, model, device, config, previous_best, tokenizer):
         if config['USE_CHAR_MODEL'] is None:
             meter = AccumulateMeter(previous_best = previous_best)
         else:
-            meter = AccumulateMeter(config, previous_best = previous_best)
+            meter = IncrementalAccumulateMeter(config, previous_best = previous_best)
 
         for idx,d in enumerate(data_loader):
 
