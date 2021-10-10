@@ -144,7 +144,8 @@ class AccumulateMeter(object):
             item = {}
             for k in features.keys():
                 if 'probas' not in k:
-                    item[k] = copy.deepcopy(features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i])
+                    to_copy = features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i]
+                    item[k] = copy.deepcopy(to_copy) if not isinstance(to_copy,str) else to_copy
             to_extend.append(item)
         for x in to_extend:
             assert 'id' in x, f"{x.keys()} has to have id field"
