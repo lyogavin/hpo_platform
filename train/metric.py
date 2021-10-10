@@ -4,6 +4,8 @@
 
 
 import configparser
+import copy
+
 import torch
 import collections
 #import torchvision
@@ -142,7 +144,7 @@ class AccumulateMeter(object):
             item = {}
             for k in features.keys():
                 if 'probas' not in k:
-                    item[k] = features[k].tolist()[i].copy() if isinstance(features[k], torch.Tensor) else features[k][i].copy()
+                    item[k] = copy.deepcopy(features[k].tolist()[i] if isinstance(features[k], torch.Tensor) else features[k][i])
             to_extend.append(item)
         for x in to_extend:
             assert 'id' in x, f"{x.keys()} has to have id field"
