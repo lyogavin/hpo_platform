@@ -125,6 +125,8 @@ class IncrementalAccumulateMeter(object):
         if reset_best:
             self.best = None
             self.last_best = None
+    def get_features_count(self):
+        return self.meter.get_features_count()
     def update(self, features, pred_starts, pred_ends, target_starts, target_ends):
         self.meter.update(features, pred_starts, pred_ends, target_starts, target_ends)
 
