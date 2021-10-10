@@ -635,7 +635,7 @@ def postprocess_qa_predictions(tokenizer, features,
     predictions = collections.OrderedDict()
     predictions_nbest = {}
 
-    logging.info(f"Post-processing {len(features_per_example)} example predictions split into {len(features)} features.")
+    logging.debug(f"Post-processing {len(features_per_example)} example predictions split into {len(features)} features.")
 
     for example_id, features_indice in features_per_example.items():
 
