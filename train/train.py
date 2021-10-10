@@ -272,7 +272,8 @@ def train_fn(data_loader, valid_loader,
 
         # update meters
         train_steps_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
-        train_total_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
+        if not config['USE_CHAR_MODEL']:
+            train_total_meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
 
         if step >= (last_train_eval_step + train_eval_period) or idx == (len(data_loader) -1):
             # Evaluate the model on train_loader.
@@ -282,8 +283,8 @@ def train_fn(data_loader, valid_loader,
             with train_steps_metrics_timer:
                 train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer, config)
             with total_train_metrics_timer:
-                if train_steps_meter.get_features_count() != train_total_meter.get_features_count():
-                    train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer, config)
+                if train_steps_meter.get_features_count() != train_total_meter.get_features_count() and not config['USE_CHAR_MODEL']:
+                        train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer, config)
                 else:
                     train_total_metrics, train_total_is_best, train_total_last_best = train_steps_metrics, train_steps_is_best, train_steps_last_best
 
