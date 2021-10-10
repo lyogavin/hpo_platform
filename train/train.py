@@ -201,8 +201,12 @@ def train_fn(data_loader, valid_loader,
     #training_log = config['TRAINING_LOG']
     
     losses = []
-    train_total_meter = AccumulateMeter()
-    train_steps_meter = AccumulateMeter()
+    if config['USE_CHAR_MODEL'] is None:
+        train_total_meter = AccumulateMeter()
+        train_steps_meter = AccumulateMeter()
+    else:
+        train_total_meter = IncrementalAccumulateMeter(config)
+        train_steps_meter = IncrementalAccumulateMeter(config)
 
     if config['FREEZE_EMBED']:
         for name, param in model.named_parameters():
@@ -283,7 +287,7 @@ def train_fn(data_loader, valid_loader,
             with train_steps_metrics_timer:
                 train_steps_metrics, train_steps_is_best, train_steps_last_best = train_steps_meter.get_metrics(tokenizer, config)
             with total_train_metrics_timer:
-                if train_steps_meter.get_features_count() != train_total_meter.get_features_count() and not config['USE_CHAR_MODEL']:
+                if train_steps_meter.get_features_count() != train_total_meter.get_features_count():
                         train_total_metrics, train_total_is_best, train_total_last_best = train_total_meter.get_metrics(tokenizer, config)
                 else:
                     train_total_metrics, train_total_is_best, train_total_last_best = train_steps_metrics, train_steps_is_best, train_steps_last_best
@@ -341,7 +345,10 @@ def eval(data_loader, model, device, config, previous_best, tokenizer):
     #logging.info(f"eval, data: {len(data_loader)}")
     model.eval()
     with torch.no_grad():
-        meter = AccumulateMeter(previous_best = previous_best)
+        if config['USE_CHAR_MODEL'] is None:
+            meter = AccumulateMeter(previous_best = previous_best)
+        else:
+            meter = AccumulateMeter(config, previous_best = previous_best)
 
         for idx,d in enumerate(data_loader):
 

@@ -111,6 +111,42 @@ import os
 from train.loss import loss_fn
 from train.data import postprocess_qa_predictions
 
+class IncrementalAccumulateMeter(object):
+    def __init__(self, config, previous_best=None):
+        self.reset()
+        self.best = previous_best
+        self.last_best = None
+        self.meter = AccumulateMeter()
+        self.config = config
+        self.res_list = []
+    def reset(self, reset_best=False):
+        self.res_list = []
+        gc.collect()
+        if reset_best:
+            self.best = None
+            self.last_best = None
+    def update(self, features, pred_starts, pred_ends, target_starts, target_ends):
+        self.meter.update(features, pred_starts, pred_ends, target_starts, target_ends)
+
+        res, _, _  = self.meter.get_metrics(None, self.config)
+        self.res_list.append(res)
+
+        self.meter.reset()
+    def get_metrics(self, tokenzier, config):
+        res = {}
+        metrics = ['loss', 'jaccard']
+        for m in metrics:
+            res[m] = np.array([r[m] for r in self.res_list]).mean()
+        is_best = False
+        if self.best is None or res['jaccard'] > self.best:
+            self.last_best = self.best
+            self.best = res['jaccard']
+            is_best = True
+        return res, is_best, self.last_best
+
+
+
+
 class AccumulateMeter(object):
     def __init__(self, previous_best=None):
         self.reset()
