@@ -132,6 +132,10 @@ class TweetCharModel(nn.Module):
             push_to_hub: bool = False,
             **kwargs,
     ):
+        if os.path.isfile(save_directory):
+            logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
+            return
+        os.makedirs(save_directory, exist_ok=True)
         return None
 
 class WaveNet(nn.Module):
