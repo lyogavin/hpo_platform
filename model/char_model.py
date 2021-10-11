@@ -121,6 +121,17 @@ class TweetCharModel(nn.Module):
 
         return start_logits, end_logits
 
+    def save_pretrained(
+            self,
+            parallel_model,
+            save_directory: Union[str, os.PathLike],
+            save_config: bool = True,
+            state_dict: Optional[dict] = None,
+            save_function: Callable = torch.save,
+            push_to_hub: bool = False,
+            **kwargs,
+    ):
+        return None
 
 class WaveNet(nn.Module):
     def __init__(self, config, from_pretrain=None, use_msd=True, dilations=[1],
