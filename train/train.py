@@ -168,7 +168,8 @@ def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fo
         tokenizer.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
 
         # save config another copy in tokenizer
-        original_model.roberta.config.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
+        if hasattr(original_model, 'roberta'):
+            original_model.roberta.config.save_pretrained(f'{saving_dir}/model_{fold}/tokenizer')
 
         # save source files...
         path = Path(os.path.dirname(os.path.abspath(__file__)))
