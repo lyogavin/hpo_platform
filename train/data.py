@@ -351,7 +351,7 @@ def get_data_kfold_split(config):
 
     if config['TEST_RUN']:
         train = train.sample(n=100)
-        if len(external_train) > 0:
+        if not config['USE_CHAR_MODEL']:
             external_train = external_train.sample(n=100)
         logging.info(f"!!! test run !!! n=100")
 
