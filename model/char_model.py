@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import os
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from transformers.file_utils import WEIGHTS_NAME
+from utils.utils import logging
 
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, dilation=1, padding="same", use_bn=True):
@@ -133,10 +135,22 @@ class TweetCharModel(nn.Module):
             **kwargs,
     ):
         if os.path.isfile(save_directory):
-            logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
+            logging.error(f"Provided path ({save_directory}) should be a directory, not a file")
             return
         os.makedirs(save_directory, exist_ok=True)
-        return None
+
+        # Only save the model itself if we are using distributed training
+        model_to_save = self
+
+        # Save the model
+        if state_dict is None:
+            state_dict = model_to_save.state_dict()
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+        save_function(state_dict, output_model_file)
+
+        logging.info(f"Model weights saved in {output_model_file}")
 
 class WaveNet(nn.Module):
     def __init__(self, config, from_pretrain=None, use_msd=True, dilations=[1],

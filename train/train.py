@@ -322,7 +322,7 @@ def train_fn(data_loader, valid_loader,
                 
                 SAVING_LOSS_THRESHOLD = config['SAVING_THRESHOLD']
                 
-                if new_best > SAVING_LOSS_THRESHOLD:
+                if new_best > SAVING_LOSS_THRESHOLD or config['TEST_RUN']:
                     save_run(original_model, model, tokenizer, config, saving_dir, fold)
 
                 else:
