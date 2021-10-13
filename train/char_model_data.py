@@ -295,4 +295,4 @@ def char_model_make_test_loader(
         pin_memory=True,
         drop_last=False
     )
-    return valid_dataloader, test, len_voc
+    return valid_dataloader, test.to_dict('records'), len_voc
