@@ -517,14 +517,20 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         TEST_ON_TRAINING=True,
                                         gen_file=True):
 
-    #train, test = get_train_and_test_df()
+    train0, test0 = get_train_and_test_df()
     train = pd.read_pickle(train_df_path)
+    assert len(train0) == len(train)
+    assert train['mapping_to_logits'].isna().count() == 0
+
     test_path = infer_and_save_inter_outputs(char_model_saving_ts,
                                  "/content/drive/MyDrive/chaii/input/",
                                  "/content/drive/MyDrive/chaii/output/",
                                  use_train=False,
                                  test_mode=False)
     test = pd.read_pickle(test_path)
+    assert len(test0) == len(test)
+    assert test['mapping_to_logits'].isna().count() == 0
+
     pretrain_base_path = f"{base_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
 
