@@ -515,13 +515,14 @@ def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRA
 
 def char_model_infer_and_gen_submission(saving_ts,
                                         char_model_saving_ts,
-                                        base_path,
+                                        input_path,
+                                        output_path,
                                         train_df_path=None,
                                         TRAIN_MODE=False,
                                         TEST_ON_TRAINING=True,
                                         gen_file=True):
 
-    train0, test0 = get_train_and_test_df(root_path=base_path)
+    train0, test0 = get_train_and_test_df(root_path=input_path)
     train = pd.read_pickle(train_df_path)
     assert len(train0) == len(train), f"len(train0) and len(train) have to be equal: {len(train0)} {len(train)}"
     assert train['mapping_to_logits'].isna().sum() == 0
@@ -535,7 +536,7 @@ def char_model_infer_and_gen_submission(saving_ts,
     assert len(test0) == len(test)
     assert test['mapping_to_logits'].isna().sum() == 0
 
-    pretrain_base_path = f"{base_path}/pretrained-{char_model_saving_ts}"
+    pretrain_base_path = f"{output_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
 
 # In[ ]:
