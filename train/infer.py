@@ -86,6 +86,7 @@ from utils.utils import *
 from train.loss import *
 from train.data import *
 from train.optimizer import *
+from train.char_model_data import *
 from model.model import *
 from train.metric import *
 from model import model
@@ -110,6 +111,11 @@ model_import = __import__(import_file_name)
 model_import = getattr(model_import, 'model')
 
 
+char_model_import_file_name = 'model'
+
+char_model_import = __import__(char_model_import_file_name)
+print(f"all dir in model: {dir(char_model_import)}")
+char_model_import = getattr(char_model_import, 'char_model')
                 
 import math
 
@@ -149,7 +155,10 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
         for idx, d in to_for:
 
 
-            model_input_keys = ['input_ids', 'attention_mask']
+            if config['USE_CHAR_MODEL'] is None:
+                model_input_keys = ['input_ids', 'attention_mask']
+            else:
+                model_input_keys = ['input_ids', 'start_probas', 'end_probas']
             data = {key: val.reshape(val.shape[0], -1).to(device) for key, val in d.items() if key in model_input_keys}
 
 
@@ -241,8 +250,11 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     logging.info(f"loading tokenizer for {config['TOKENIZER']}")
     logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
     tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
+    if config['USE_CHAR_MODEL'] is not None:
+        sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
+    else:
+        sub_ds_loader,features,len_voc  = char_model_make_test_loader(config, tokenizer, df=df)
 
-    sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
 
     #logging.info(f"features: {features}")
     features_none_mapping_count = 0
@@ -261,7 +273,9 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
 
     for p in pretrain_paths:
         model_class = getattr(model_import, config['MODEL_CLASS'])
-        
+        if config['USE_CHAR_MODEL'] is not None:
+            model_class = getattr(char_model_import, config['USE_CHAR_MODEL'])
+
         # hardcode upload fix:
         if os.path.exists(f'{p}/training_config.pickle'):
             with open(f'{p}/training_config.pickle', "rb") as input_file:
@@ -276,7 +290,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         if model_config['EMBED_OTHER_GPU'] is not None:
             model_config['EMBED_OTHER_GPU'] = 0
 
-            
+        if config['USE_CHAR_MODEL'] is not None:
+            model_config['len_voc'] = len_voc
         model = model_class(from_pretrain=p, config=model_config)
         model.load_checkpoint(p)
         model.to(device)
@@ -483,11 +498,32 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
     train.to_pickle(output_path)
     logging.info(f"saved {output_path}")
 
+    return output_path
+
 
 def infer_and_gen_submission(saving_ts, base_path, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True):
 
     train, test = get_train_and_test_df()
     pretrain_base_path = f"{base_path}/pretrained-{saving_ts}"
+    gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
+
+def char_model_infer_and_gen_submission(saving_ts,
+                                        char_model_saving_ts,
+                                        base_path,
+                                        train_df_path=None,
+                                        TRAIN_MODE=False,
+                                        TEST_ON_TRAINING=True,
+                                        gen_file=True):
+
+    #train, test = get_train_and_test_df()
+    train = pd.read_pickle(train_df_path)
+    test_path = infer_and_save_inter_outputs(saving_ts,
+                                 "/content/drive/MyDrive/chaii/input/",
+                                 "/content/drive/MyDrive/chaii/output/",
+                                 use_train=False,
+                                 test_mode=False)
+    test = pd.read_pickle(test_path)
+    pretrain_base_path = f"{base_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file)
 
 # In[ ]:

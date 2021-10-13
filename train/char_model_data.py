@@ -265,7 +265,7 @@ def char_model_make_loader(
     logging.info(f"loaders created, num steps: train-{len(train_dataloader)}, val-{len(valid_dataloader)}")
     return train_dataloader, valid_dataloader, train_set, valid_set, len_voc
 
-def make_test_loader(
+def char_model_make_test_loader(
         config,
         tokenizer,
         df=None):
@@ -277,17 +277,21 @@ def make_test_loader(
     else:
         test = df
 
-    test_features = []
-    for i, row in test.iterrows():
-        test_features += prepare_test_features(config, row, tokenizer)
 
-    test_dataset = DatasetRetriever(test_features, mode='test')
-    test_dataloader = DataLoader(
-        test_dataset,
+    tokenizer = Tokenizer(num_words=None, char_level=True, oov_token='UNK', lower=True)
+    tokenizer.fit_on_texts(test.apply(lambda x: ' '.join([x['context'], x['question']]), axis=1).values)
+
+    len_voc = len(tokenizer.word_index) + 1
+    X_test = tokenizer.texts_to_sequences(test['context'].values)
+
+    valid_sampler = SequentialSampler(test)
+    valid_dataset = CharDataset(test, X_test)
+    valid_dataloader = DataLoader(
+        valid_dataset,
         batch_size=config['VALID_BATCH_SIZE'],
-        sampler=SequentialSampler(test_dataset),
+        sampler=valid_sampler,
         num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
         drop_last=False
     )
-    return test_dataloader, test_features
+    return valid_dataloader, test, len_voc
