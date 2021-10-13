@@ -443,7 +443,8 @@ def download_saving(url, saving_ts):
     os.remove(downloaded_file)
 
 
-def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, use_train=True, output_logits=True, test_mode=False):
+def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, use_train=True, output_logits=True, test_mode=False,
+                                 char_model=False):
     train, test = get_train_and_test_df(input_base_path)
     str_train = 'train' if use_train else 'test'
 
@@ -518,7 +519,7 @@ def char_model_infer_and_gen_submission(saving_ts,
 
     #train, test = get_train_and_test_df()
     train = pd.read_pickle(train_df_path)
-    test_path = infer_and_save_inter_outputs(saving_ts,
+    test_path = infer_and_save_inter_outputs(char_model_saving_ts,
                                  "/content/drive/MyDrive/chaii/input/",
                                  "/content/drive/MyDrive/chaii/output/",
                                  use_train=False,
