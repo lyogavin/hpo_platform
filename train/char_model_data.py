@@ -157,16 +157,17 @@ class CharDataset(Dataset):
         self.df = df.copy()
         #start_probas, end_probas
 
-        max_len = self.df['end_position'].max() + 1
+        if 'start_position' in self.df.columns:
+            max_len = self.df['end_position'].max() + 1
 
-        logging.info(f"filtering based on maxlen: {max_len}, before filter: {len(self.df)}")
+            logging.info(f"filtering based on maxlen: {max_len}, before filter: {len(self.df)}")
 
-        self.df = self.df[self.df.start_position < max_len]
-        logging.info(f"filtering based on maxlen: {max_len}, after filter: {len(self.df)}")
+            self.df = self.df[self.df.start_position < max_len]
+            logging.info(f"filtering based on maxlen: {max_len}, after filter: {len(self.df)}")
 
-        self.df = self.df.reset_index(drop=True)
+            self.df = self.df.reset_index(drop=True)
 
-        self.df['end_position'] = self.df['end_position'].apply(lambda x: min(x, max_len-1))
+            self.df['end_position'] = self.df['end_position'].apply(lambda x: min(x, max_len-1))
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
