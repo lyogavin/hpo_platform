@@ -482,7 +482,8 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
             assert 'id' in feature
             features_per_example[feature["id"]].append(i)
 
-    for i, row in train.iterrows():
+    to_iter = train if use_train else test
+    for i, row in to_iter.iterrows():
         #for example_id, features_indice in features_per_example.items():
         features_indice = features_per_example[row['id']]
         mapping_to_logits = []
