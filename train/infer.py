@@ -519,7 +519,7 @@ def char_model_infer_and_gen_submission(saving_ts,
 
     train0, test0 = get_train_and_test_df(root_path=base_path)
     train = pd.read_pickle(train_df_path)
-    assert len(train0) == len(train)
+    assert len(train0) == len(train), f"len(train0) and len(train) have to be equal: {len(train0)} {len(train)}"
     assert train['mapping_to_logits'].isna().count() == 0
 
     test_path = infer_and_save_inter_outputs(char_model_saving_ts,
