@@ -522,7 +522,7 @@ def char_model_infer_and_gen_submission(saving_ts,
     assert len(train0) == len(train), f"len(train0) and len(train) have to be equal: {len(train0)} {len(train)}"
     assert train['mapping_to_logits'].isna().sum() == 0
 
-    test_path = infer_and_save_inter_outputs(char_model_saving_ts,
+    test_path = infer_and_save_inter_outputs(saving_ts,
                                  "/content/drive/MyDrive/chaii/input/",
                                  "/content/drive/MyDrive/chaii/output/",
                                  use_train=False,
