@@ -517,7 +517,7 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         TEST_ON_TRAINING=True,
                                         gen_file=True):
 
-    train0, test0 = get_train_and_test_df()
+    train0, test0 = get_train_and_test_df(root_path=base_path)
     train = pd.read_pickle(train_df_path)
     assert len(train0) == len(train)
     assert train['mapping_to_logits'].isna().count() == 0
