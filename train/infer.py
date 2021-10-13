@@ -495,9 +495,12 @@ def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, u
             mapping_to_logits.append((features[feature_index]["offset_mapping"], start_logit, end_logit))
         id_mapping_to_logits.append(mapping_to_logits)
 
-    train['mapping_to_logits'] = id_mapping_to_logits
-
-    train.to_pickle(output_path)
+    if use_train:
+        train['mapping_to_logits'] = id_mapping_to_logits
+        train.to_pickle(output_path)
+    else:
+        test['mapping_to_logits'] = id_mapping_to_logits
+        test.to_pickle(output_path)
     logging.info(f"saved {output_path}")
 
     return output_path
