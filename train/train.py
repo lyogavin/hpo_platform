@@ -92,7 +92,7 @@ from model.char_model import *
 from train.metric import *
 from model import model
 from exp_record_store.exp_record import ExpRecord
-from utils.utils import logging
+from utils.utils import logging, logging_file_path
 from utils.timer import Timer
 #logging = utils.logging
 
@@ -162,6 +162,8 @@ import distutils
 def save_run(original_model, paralelled_model, tokenizer, config, saving_dir, fold):
 
     with Timer("training saving") as saving_timer:
+
+        config['logging_file_path']=logging_file_path
 
         original_model.save_pretrained(paralelled_model, f'{saving_dir}/model_{fold}')
         save_training_config(config, f'{saving_dir}/model_{fold}')
