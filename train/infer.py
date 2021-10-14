@@ -257,16 +257,6 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         sub_ds_loader,features,len_voc  = char_model_make_test_loader(config, tokenizer, df=df)
 
 
-    #logging.info(f"features: {features}")
-    features_none_mapping_count = 0
-    for ft in features:
-        if 'offset_mapping' not in ft:
-            print(f"ft doesnt have offset_mapping:{ft}")
-        for x in ft['offset_mapping']:
-            if x is None:
-                features_none_mapping_count+=1
-
-    logging.info(f"count none mapping features before infer: {features_none_mapping_count}")
     
     start_logits = None
     end_logits = None
@@ -328,12 +318,6 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     ret_start_logits = start_logits.tolist().copy()
     ret_end_logits = end_logits.tolist().copy()
 
-    features_none_mapping_count = 0
-    for ft in features:
-        for x in ft['offset_mapping']:
-            if x is None:
-                features_none_mapping_count+=1
-    logging.info(f"count none mapping features before pred: {features_none_mapping_count}")
 
     if not nbest:
         preds = postprocess_qa_predictions(tokenizer, features,
@@ -354,15 +338,6 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         df['PredictionStringNBest'] = df['id'].map(preds_nbest)
         ret_df = preds_nbest
 
-    #logging.info(f"features after infer: {features}")
-    features_none_mapping_count = 0
-    for ft in features:
-        for x in ft['offset_mapping']:
-            if x is None:
-                features_none_mapping_count+=1
-    logging.info(f"count none mapping features after infer: {features_none_mapping_count}")
-
-    logging.info(f'offset_mapping: {features[0]["offset_mapping"]}')
 
     if not return_logits:
         return ret_df
