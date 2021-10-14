@@ -124,6 +124,15 @@ class TweetCharModel(nn.Module):
 
         return start_logits, end_logits
 
+    def load_checkpoint(self, save_directory):
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+
+        checkpoint = torch.load(output_model_file, map_location=torch.device('cpu'))
+        self.load_state_dict(checkpoint, strict=False)
+        del checkpoint
+        
     def save_pretrained(
             self,
             parallel_model,
