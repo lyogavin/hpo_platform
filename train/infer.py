@@ -369,7 +369,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
             jaccard_metric = res_df['jaccard'].mean()
-            assert jaccard_metric > 0.8, f"jacarrd on train: {jaccard_metric} should be bigger than 0.8"
+            assert jaccard_metric > 0.6, f"jacarrd on train: {jaccard_metric} should be bigger than 0.6"
 
             logging.info(f"loss on training: {jaccard_metric}")
 
@@ -383,7 +383,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
         res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
         jaccard_metric = res_df['jaccard'].mean()
-        assert jaccard_metric > 0.8, f"jacarrd on train: {jaccard_metric} should be bigger than 0.8"
+        assert jaccard_metric > 0.6, f"jacarrd on train: {jaccard_metric} should be bigger than 0.6"
 
         logging.info(f"loss on training: {jaccard_metric}")
 

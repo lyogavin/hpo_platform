@@ -132,7 +132,7 @@ class TweetCharModel(nn.Module):
         checkpoint = torch.load(output_model_file, map_location=torch.device('cpu'))
         self.load_state_dict(checkpoint, strict=False)
         del checkpoint
-        
+
     def save_pretrained(
             self,
             parallel_model,
