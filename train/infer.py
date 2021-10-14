@@ -260,8 +260,9 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     #logging.info(f"features: {features}")
     features_none_mapping_count = 0
     for ft in features:
+        if 'offset_mapping' not in ft:
+            print(f"ft doesnt have offset_mapping:{ft}")
         for x in ft['offset_mapping']:
-            print(f"ft:{ft}")
             if x is None:
                 features_none_mapping_count+=1
 
