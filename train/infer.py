@@ -261,6 +261,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     features_none_mapping_count = 0
     for ft in features:
         for x in ft['offset_mapping']:
+            print(f"ft:{ft}")
             if x is None:
                 features_none_mapping_count+=1
 
