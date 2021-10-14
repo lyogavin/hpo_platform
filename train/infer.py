@@ -390,6 +390,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
         
     if not TRAIN_MODE and gen_file:
         pred.to_csv('./submission.csv',index=False)
+        logging.info(f"gen: ./submission.csv")
 
     return pred
 
