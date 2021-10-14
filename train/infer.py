@@ -283,8 +283,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         if model_config['EMBED_OTHER_GPU'] is not None:
             model_config['EMBED_OTHER_GPU'] = 0
 
-        if config['USE_CHAR_MODEL'] is not None:
-            model_config['len_voc'] = len_voc
+        #if config['USE_CHAR_MODEL'] is not None:
+        #    model_config['len_voc'] = len_voc
         model = model_class(from_pretrain=p, config=model_config)
         model.load_checkpoint(p)
         model.to(device)
