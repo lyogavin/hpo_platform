@@ -372,6 +372,13 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             res_df = pred_df(train, pretrain_base_path)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
+            if config['DUMP_PRED']:
+                import pickle
+                dump_ts = int(time.time() / 60)
+                with open(f'./dump_pred_{dump_ts}.pickle', 'wb') as f:
+                    pickle.dump(res_df['id','PredictionString'], f)
+                    logging.info(f'pred dumped in: ./dump_pred_{dump_ts}.pickle')
+
             jaccard_metric = res_df['jaccard'].mean()
             assert jaccard_metric > 0.6, f"jacarrd on train: {jaccard_metric} should be bigger than 0.6"
 
