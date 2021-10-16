@@ -360,7 +360,7 @@ def create_submission(_,predictions, calibrate_rms=None):
 # In[ ]:
 
 
-def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True, nbest=False, filter_ids=None):
+def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True, nbest=False, filter_ids=None,dump_pred=False):
     to_ret = None
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
@@ -372,7 +372,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             res_df = pred_df(train, pretrain_base_path)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
-            if config['DUMP_PRED']:
+            if dump_pred:
                 import pickle
                 dump_ts = int(time.time() / 60)
                 with open(f'./dump_pred_{dump_ts}.pickle', 'wb') as f:
@@ -511,7 +511,8 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         TRAIN_MODE=False,
                                         TEST_ON_TRAINING=True,
                                         gen_file=True,
-                                        filter_ids=None):
+                                        filter_ids=None,
+                                        dump_pred=False):
 
     train0, test0 = get_train_and_test_df(root_path=input_path)
     train = pd.read_pickle(train_df_path)
@@ -529,7 +530,8 @@ def char_model_infer_and_gen_submission(saving_ts,
     assert test['mapping_to_logits'].isna().sum() == 0
 
     pretrain_base_path = f"{output_path}/pretrained-{char_model_saving_ts}"
-    gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,filter_ids=filter_ids)
+    gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,
+                   filter_ids=filter_ids,dump_pred=dump_pred)
 
 # In[ ]:
 
