@@ -76,6 +76,7 @@ class TweetCharModel(nn.Module):
         super().__init__()
         self.config = config
         len_voc = config['len_voc']
+        logging.info(f"initing model len_voc: {len_voc}")
         self.use_msd = use_msd
 
         self.char_embeddings = nn.Embedding(len_voc, char_embed_dim)
