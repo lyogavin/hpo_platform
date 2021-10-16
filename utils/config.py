@@ -25,6 +25,7 @@ similarity_sampling_config = {
 default_train_config = {
     # test run...
     'TEST_RUN':False,
+    'DUMP_PRED':False,
 
     # optimizer
     'LR':1e-5,

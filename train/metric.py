@@ -243,6 +243,14 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
                    for example_id, pred_text in text_predictions.items()]
             res = np.array(res).mean()
 
+            if config['DUMP_PRED']:
+                import pickle
+                dump_ts = (int)time.time()
+                with open(f'./dump_pred_{dump_ts}.pickle', 'wb') as f:
+                    pickle.dump(text_predictions, f)
+                    logging.info(f'pred dumped in: ./dump_pred_{dump_ts}.pickle')
+
+
         res_dict[metric] = res
     return res_dict
 
