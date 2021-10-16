@@ -119,6 +119,7 @@ class IncrementalAccumulateMeter(object):
         self.meter = AccumulateMeter()
         self.config = config
         self.res_list = []
+        self.res_count_list = []
     def reset(self, reset_best=False):
         self.res_list = []
         gc.collect()
@@ -132,13 +133,14 @@ class IncrementalAccumulateMeter(object):
 
         res, _, _  = self.meter.get_metrics(None, self.config)
         self.res_list.append(res)
+        self.res_count_list.append(self.meter.get_features_count())
 
         self.meter.reset()
     def get_metrics(self, tokenzier, config):
         res = {}
         metrics = ['loss', 'jaccard']
         for m in metrics:
-            res[m] = np.array([r[m] for r in self.res_list]).mean()
+            res[m] = np.array([r[m] for r in self.res_list]).sum() / np.array(self.res_count_list).sum()
         is_best = False
         if self.best is None or res['jaccard'] > self.best:
             self.last_best = self.best
