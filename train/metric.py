@@ -232,11 +232,11 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
             logging.debug(f"post process for {[x['end_position'] for x in features]}")
             logging.debug(f"post process for {pred_starts}-{pred_ends}")
             text_predictions = postprocess_qa_predictions(tokenzier, features, pred_starts, pred_ends, use_char_model=config['USE_CHAR_MODEL'])
-            logging.info(f"text predictions: {text_predictions}")
+            logging.debug(f"text predictions: {text_predictions}")
             example_id_to_answers = {}
             for feat in features:
                 example_id_to_answers[feat['id']] = feat['answer_text']
-            logging.info(f"text answers: {example_id_to_answers}")
+            logging.debug(f"text answers: {example_id_to_answers}")
 
             res = [jaccard(pred_text,
                            example_id_to_answers[example_id])
