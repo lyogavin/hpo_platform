@@ -376,7 +376,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
                 import pickle
                 dump_ts = int(time.time() / 60)
                 with open(f'./dump_pred_{dump_ts}.pickle', 'wb') as f:
-                    pickle.dump(res_df['id','PredictionString'], f)
+                    pickle.dump(res_df[['id','PredictionString']], f)
                     logging.info(f'pred dumped in: ./dump_pred_{dump_ts}.pickle')
 
             jaccard_metric = res_df['jaccard'].mean()
