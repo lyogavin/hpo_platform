@@ -368,7 +368,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             logging.info(f"filter_ids:{filter_ids}")
             if filter_ids is not None:
                 logging.info(f"filtering ids:{filter_ids}")
-                train = train[train.id.isin(filter_ids)]
+                train = train[train.id.isin(filter_ids)].reset_index(drop=True)
             res_df = pred_df(train, pretrain_base_path)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
