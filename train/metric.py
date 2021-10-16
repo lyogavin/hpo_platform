@@ -133,7 +133,7 @@ class IncrementalAccumulateMeter(object):
 
         res, _, _  = self.meter.get_metrics(None, self.config)
         self.res_list.append(res)
-        self.res_count_list.append(len(np.unique([ft['id'] for ft in features])))
+        self.res_count_list.append(features['id'].nunique())
 
         self.meter.reset()
     def get_metrics(self, tokenzier, config):
