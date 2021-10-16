@@ -496,6 +496,7 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         input_path,
                                         output_path,
                                         train_df_path=None,
+                                        test_df_path=None,
                                         TRAIN_MODE=False,
                                         TEST_ON_TRAINING=True,
                                         gen_file=True):
@@ -505,12 +506,13 @@ def char_model_infer_and_gen_submission(saving_ts,
     assert len(train0) == len(train), f"len(train0) and len(train) have to be equal: {len(train0)} {len(train)}"
     assert train['mapping_to_logits'].isna().sum() == 0
 
-    test_path = infer_and_save_inter_outputs(saving_ts,
-                                 "/content/drive/MyDrive/chaii/input/",
-                                 "/content/drive/MyDrive/chaii/output/",
-                                 use_train=False,
-                                 test_mode=False)
-    test = pd.read_pickle(test_path)
+    if test_df_path is None:
+        test_df_path = infer_and_save_inter_outputs(saving_ts,
+                                     "/content/drive/MyDrive/chaii/input/",
+                                     "/content/drive/MyDrive/chaii/output/",
+                                     use_train=False,
+                                     test_mode=False)
+    test = pd.read_pickle(test_df_path)
     assert len(test0) == len(test)
     assert test['mapping_to_logits'].isna().sum() == 0
 
