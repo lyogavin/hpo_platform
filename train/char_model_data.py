@@ -217,7 +217,10 @@ def char_model_make_loader(
         tokenizer, fold
 ):
     tokenizer = Tokenizer(num_words=None, char_level=True, oov_token='UNK', lower=True)
-    tokenizer.fit_on_texts(data.apply(lambda x: ' '.join([x['context'], x['question'], x['answer_text']]), axis=1).values)
+
+    to_fit = pd.read_csv(f'{config["DATA_ROOT_PATH"]}/chaii-hindi-and-tamil-question-answering/train.csv')
+
+    tokenizer.fit_on_texts(to_fit.apply(lambda x: ' '.join([x['context'], x['question'], x['answer_text']]), axis=1).values)
 
     len_voc = len(tokenizer.word_index) + 1
     data["start_position"] = data["answer_start"]
@@ -280,7 +283,10 @@ def char_model_make_test_loader(
 
 
     tokenizer = Tokenizer(num_words=None, char_level=True, oov_token='UNK', lower=True)
-    tokenizer.fit_on_texts(test.apply(lambda x: ' '.join([x['context'], x['question']]), axis=1).values)
+
+    to_fit = pd.read_csv(f'{input_path}/chaii-hindi-and-tamil-question-answering/train.csv')
+
+    tokenizer.fit_on_texts(to_fit.apply(lambda x: ' '.join([x['context'], x['question']]), axis=1).values)
 
     len_voc = len(tokenizer.word_index) + 1
     X_test = tokenizer.texts_to_sequences(test['context'].values)
