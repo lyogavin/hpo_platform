@@ -365,6 +365,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
             # test first...
+            logging.info(f"filter_ids:{filter_ids}")
             if filter_ids is not None:
                 logging.info(f"filtering ids:{filter_ids}")
                 train = train[train.id.isin(filter_ids)]
