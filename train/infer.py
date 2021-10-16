@@ -521,7 +521,7 @@ def char_model_infer_and_gen_submission(saving_ts,
     assert test['mapping_to_logits'].isna().sum() == 0
 
     pretrain_base_path = f"{output_path}/pretrained-{char_model_saving_ts}"
-    gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,filter_ids)
+    gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,filter_ids=filter_ids)
 
 # In[ ]:
 
