@@ -140,7 +140,7 @@ class IncrementalAccumulateMeter(object):
         res = {}
         metrics = ['loss', 'jaccard']
         for m in metrics:
-            res_sum = np.array([res * count for res, count in zip(self.res_list, self.res_count_list)]).sum()
+            res_sum = np.array([res_item[m] * count_item for res_item, count_item in zip(self.res_list, self.res_count_list)]).sum()
             res_count = np.array(self.res_count_list).sum()
             res[m] = res_sum / res_count
         is_best = False
