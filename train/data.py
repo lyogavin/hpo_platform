@@ -650,12 +650,12 @@ def postprocess_qa_predictions(tokenizer, features,
 
             if use_char_model:
                 sequence_ids = features[feature_index]["sequence_ids"]
+                # fix length exceeding
+                start_logits=np.where(sequence_ids != 0, start_logits, np.min(start_logits))
+                end_logits=np.where(sequence_ids != 0, end_logits, np.min(end_logits))
                 start_char = np.argmax(start_logits)
                 end_char = np.argmax(end_logits)
 
-                # fix length exceeding
-                start_char=np.where(sequence_ids != 0, start_char, np.min(start_char))
-                end_char=np.where(sequence_ids != 0, end_char, np.min(end_char))
                 predictions[example_id] = context[start_char: end_char]
             else:
 
