@@ -330,7 +330,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
 
     df['PredictionString'] = df['id'].map(preds)
     df['start_logits'] = start_logits.tolist()
-    df['endlogits'] = end_logits.tolist()
+    df['end_logits'] = end_logits.tolist()
 
 
     if not nbest:
