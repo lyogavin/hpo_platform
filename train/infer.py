@@ -374,7 +374,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
 
             # debug output:
             debug_dump_ids = ['5f3e08e8e', 'f5947cc1f', '989287230', 'b6a100479']
-            logging.info(f"debug dump: {[(r['id'], r['PredictionString']) for i,r in res_df.iterrows() if r['id'] in res_df]}")
+            logging.info(f"debug dump: {[(r['id'], r['PredictionString']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
 
             if dump_pred:
                 import pickle
