@@ -649,8 +649,13 @@ def postprocess_qa_predictions(tokenizer, features,
             end_logits = all_end_logits[feature_index]
 
             if use_char_model:
+                sequence_ids = features[feature_index]["sequence_ids"]
                 start_char = np.argmax(start_logits)
                 end_char = np.argmax(end_logits)
+
+                # fix length exceeding
+                start_char=torch.where(sequence_ids != 0, start_char, torch.min(start_char))
+                end_char=torch.where(sequence_ids != 0, end_char, torch.min(end_char))
                 predictions[example_id] = context[start_char: end_char]
             else:
 
