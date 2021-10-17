@@ -329,6 +329,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
                                            end_logits.tolist(), return_nbest=True, use_char_model=config['USE_CHAR_MODEL'])
 
     df['PredictionString'] = df['id'].map(preds)
+    df['start_logits'] = start_logits.tolist()
+    df['endlogits'] = end_logits.tolist()
 
 
     if not nbest:
@@ -375,6 +377,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             # debug output:
             debug_dump_ids = ['5f3e08e8e', 'f5947cc1f', '989287230', 'b6a100479']
             logging.info(f"debug dump: {[(r['id'], r['PredictionString']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
+            logging.info(f"debug dump, s,e: {[(r['id'], r['start_logits'], r['end_logits']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
 
             if dump_pred:
                 import pickle

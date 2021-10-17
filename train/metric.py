@@ -240,11 +240,15 @@ def get_metrics(features, tokenzier, pred_starts, pred_ends, target_starts, targ
             example_id_to_answers = {}
             for feat in features:
                 example_id_to_answers[feat['id']] = feat['answer_text']
+            example_id_to_start_ends = {}
+            for feat, s,e in zip(features, pred_starts, pred_ends):
+                example_id_to_start_ends[feat['id']] = (s,e)
             logging.debug(f"text answers: {example_id_to_answers}")
 
             # debug output:
             debug_dump_ids = ['5f3e08e8e', 'f5947cc1f', '989287230', 'b6a100479']
             logging.info(f"debug dump: {[(did, example_id_to_answers[did]) for did in debug_dump_ids if did in example_id_to_answers]}")
+            logging.info(f"debug dump s,e: {[(did, example_id_to_start_ends[did]) for did in debug_dump_ids if did in example_id_to_start_ends]}")
 
 
             res = [jaccard(pred_text,
