@@ -372,6 +372,10 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             res_df = pred_df(train, pretrain_base_path)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
+            # debug output:
+            debug_dump_ids = ['5f3e08e8e', 'f5947cc1f', '989287230', 'b6a100479']
+            logging.info(f"debug dump: {[(r['id'], r['PredictionString']) for i,r in res_df.iterrows() if r['id'] in res_df]}")
+
             if dump_pred:
                 import pickle
                 dump_ts = int(time.time() / 60)
