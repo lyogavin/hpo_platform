@@ -95,6 +95,9 @@ class TweetCharModel(nn.Module):
 
         self.high_dropout = nn.Dropout(p=0.5)
 
+        if from_pretrain is not None:
+            self.load_checkpoint(from_pretrain)
+
     def forward(self, input_ids, start_probas, end_probas):
         bs, T = input_ids.size()
 
