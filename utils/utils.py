@@ -304,3 +304,7 @@ def diff_dict(dict1, dict2, to_exclude = None):
         raise te
     return {k:dict1[k] for k in dict(set1 ^ set2).keys()}
 
+def debug_dump_model(model):
+    logging.info('dumping model....')
+    for n, p in model.named_parameters():
+        logging.info(f"model dump: {n}:{p.data[:100]}")

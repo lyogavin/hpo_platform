@@ -289,6 +289,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         model.load_checkpoint(p)
         model.to(device)
 
+        debug_dump_model(model)
+
         pred_start, pred_end = infer(sub_ds_loader,model,device, model_config, tokenizer)
 
 
@@ -376,7 +378,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
 
             # debug output:
             debug_dump_ids = ['5f3e08e8e', 'f5947cc1f', '989287230', 'b6a100479']
-            logging.info(f"debug dump: {[(r['id'], r['PredictionString']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
+            logging.info(f"debug dump: {[(r['id'], r['PredictionString'], r['input_ids']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
             logging.info(f"debug dump, s,e: {[(r['id'], r['start_logits'], r['end_logits']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
 
             if dump_pred:

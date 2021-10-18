@@ -373,6 +373,7 @@ def eval(data_loader, model, device, config, previous_best, tokenizer):
             
             outputs_start, outputs_end = outputs
 
+            debug_dump_model(model)
             meter.update(d, outputs_start, outputs_end, targets_start, targets_end)
 
         #sp_cor = 0 #spearmanr(fin_targets, fin_outputs)
