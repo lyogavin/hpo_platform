@@ -542,7 +542,7 @@ def char_model_infer_and_gen_submission(saving_ts,
     # test split...
     if test_split_config is not None:
         logging.info('testing split...')
-        data, split_output = get_data_kfold_split(config)
+        data, split_output = get_data_kfold_split(test_split_config)
         assert len(train) == len(data)
 
         train = data.loc[split_output[0][0]]
