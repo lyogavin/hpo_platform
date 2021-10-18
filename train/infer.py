@@ -521,7 +521,8 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         TEST_ON_TRAINING=True,
                                         gen_file=True,
                                         filter_ids=None,
-                                        dump_pred=False):
+                                        dump_pred=False,
+                                        test_split_config=None):
 
     train0, test0 = get_train_and_test_df(root_path=input_path)
     train = pd.read_pickle(train_df_path)
@@ -537,6 +538,13 @@ def char_model_infer_and_gen_submission(saving_ts,
     test = pd.read_pickle(test_df_path)
     assert len(test0) == len(test)
     assert test['mapping_to_logits'].isna().sum() == 0
+
+    # test split...
+    if test_split_config is not None:
+        data, split_output = get_data_kfold_split(config)
+        assert len(train) == len(data)
+
+        train = data.loc[split_output[0][0]]
 
     pretrain_base_path = f"{output_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,
