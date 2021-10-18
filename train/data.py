@@ -664,7 +664,7 @@ def postprocess_qa_predictions(tokenizer, features,
             else:
 
 
-                sequence_ids = features[feature_index]["sequence_ids"]
+                sequence_ids = features[feature_index]["input_ids"]
                 context_index = 1
                 logging.debug(f"{example_id} offset_mapping: {features[feature_index]['offset_mapping']}")
 

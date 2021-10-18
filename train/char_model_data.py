@@ -301,5 +301,5 @@ def char_model_make_test_loader(
         pin_memory=True,
         drop_last=False
     )
-    test['sequence_ids'] = X_test
+    test['input_ids'] = X_test
     return valid_dataloader, test.to_dict('records'), len_voc
