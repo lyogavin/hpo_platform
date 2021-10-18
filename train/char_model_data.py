@@ -152,7 +152,7 @@ class DatasetRetriever(Dataset):
 
 
 class CharDataset(Dataset):
-    def __init__(self, df, X, n_models=1, max_len=40998, train=True):
+    def __init__(self, df, X, n_models=1, max_len=1500, train=True):
         self.max_len = max_len
         self.df = df.copy()
         #start_probas, end_probas
@@ -168,6 +168,11 @@ class CharDataset(Dataset):
             self.df = self.df.reset_index(drop=True)
 
             self.df['end_position'] = self.df['end_position'].apply(lambda x: min(x, max_len-1))
+        else:
+            max_len = self.df['context'].apply(lambda x: len(x)).max()
+
+            logging.info(f"using max len context as maxlen: {max_len}")
+
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
