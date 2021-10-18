@@ -152,7 +152,7 @@ class DatasetRetriever(Dataset):
 
 
 class CharDataset(Dataset):
-    def __init__(self, df, X, n_models=1, max_len=1500, train=True):
+    def __init__(self, df, X, n_models=1, max_len=40998, train=True):
         self.max_len = max_len
         self.df = df.copy()
         #start_probas, end_probas
