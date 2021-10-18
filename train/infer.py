@@ -545,7 +545,7 @@ def char_model_infer_and_gen_submission(saving_ts,
         data, split_output = get_data_kfold_split(test_split_config)
         assert len(train) == len(data)
 
-        train = train[train.id.isin(data.loc[split_output[0][0]]['id'].values)]
+        train = train[train.id.isin(data.loc[split_output[0][0]]['id'].values)].reset_index(drop=True)
 
     pretrain_base_path = f"{output_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,
