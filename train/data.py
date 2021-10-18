@@ -649,7 +649,7 @@ def postprocess_qa_predictions(tokenizer, features,
             end_logits = all_end_logits[feature_index]
 
             if use_char_model:
-                sequence_ids = features[feature_index]["sequence_ids"]
+                sequence_ids = features[feature_index]["input_ids"]
                 # fix length exceeding
                 #start_logits=np.where(sequence_ids != 0, start_logits, np.min(start_logits))
                 #end_logits=np.where(sequence_ids != 0, end_logits, np.min(end_logits))
@@ -664,7 +664,7 @@ def postprocess_qa_predictions(tokenizer, features,
             else:
 
 
-                sequence_ids = features[feature_index]["input_ids"]
+                sequence_ids = features[feature_index]["sequence_ids"]
                 context_index = 1
                 logging.debug(f"{example_id} offset_mapping: {features[feature_index]['offset_mapping']}")
 
