@@ -505,6 +505,8 @@ def make_test_loader(
     else:
         test = df
 
+    logging.info(f"test shape for make test loader: {test.shape}")
+
     test_features = []
     for i, row in test.iterrows():
         test_features += prepare_test_features(config, row, tokenizer)
