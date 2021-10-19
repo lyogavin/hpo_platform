@@ -212,7 +212,7 @@ from pathlib import Path
 
 
     
-def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=False):
+def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=False, data_input_path=None):
     # get config from pretrain path first...
     pretrain_paths = []
 
@@ -259,7 +259,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     if config['USE_CHAR_MODEL'] is None:
         sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
     else:
-        sub_ds_loader,features,len_voc  = char_model_make_test_loader(config, tokenizer, df=df)
+        sub_ds_loader,features,len_voc  = char_model_make_test_loader(config, tokenizer, df=df, data_input_path=data_input_path)
 
 
     
@@ -372,7 +372,9 @@ def create_submission(_,predictions, calibrate_rms=None):
 # In[ ]:
 
 
-def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TRAINING=True, gen_file=True, nbest=False, filter_ids=None,dump_pred=False):
+def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False,
+                   TEST_ON_TRAINING=True, gen_file=True, nbest=False,
+                   filter_ids=None,dump_pred=False,data_input_path=None):
     to_ret = None
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
@@ -381,7 +383,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False, TEST_ON_TR
             if filter_ids is not None:
                 logging.info(f"filtering ids:{filter_ids}")
                 train = train[train.id.isin(filter_ids)].reset_index(drop=True)
-            res_df = pred_df(train, pretrain_base_path)
+            res_df = pred_df(train, pretrain_base_path, data_input_path=data_input_path)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
             # debug output:
@@ -561,7 +563,7 @@ def char_model_infer_and_gen_submission(saving_ts,
 
     pretrain_base_path = f"{char_model_save_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,
-                   filter_ids=filter_ids,dump_pred=dump_pred)
+                   filter_ids=filter_ids,dump_pred=dump_pred, data_input_path=input_path)
 
 # In[ ]:
 

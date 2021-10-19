@@ -277,9 +277,9 @@ def char_model_make_loader(
 def char_model_make_test_loader(
         config,
         tokenizer,
-        df=None):
+        df=None, data_input_path=None):
 
-    input_path = config['DATA_ROOT_PATH']
+    input_path = config['DATA_ROOT_PATH'] if data_input_path is None else data_input_path
 
     if df is None:
         test = pd.read_csv(f'{input_path}/chaii-hindi-and-tamil-question-answering/test.csv')
