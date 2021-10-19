@@ -331,6 +331,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
                                            end_logits.tolist(), return_nbest=True, use_char_model=config['USE_CHAR_MODEL'])
 
     df['PredictionString'] = df['id'].map(preds)
+    logging.info(f"dump assignment: {start_logits.shape}")
+    logging.info(f"dump assignment: {start_logits.tolist()}")
     df['start_logits'] = start_logits.tolist()
     df['end_logits'] = end_logits.tolist()
 
