@@ -139,11 +139,11 @@ from pathlib import Path
 import distutils
 
 # for debug...
-printed_debug_info = True
+printed_debug_info = False
 
 def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     global printed_debug_info
-    printed_debug_info = True
+    printed_debug_info = False
     model.eval()
     to_ret = {}
     with torch.no_grad():
@@ -252,7 +252,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
     tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
 
-    logging.info(f"shape of df: {df.shape}")
+    #logging.info(f"shape of df: {df.shape}")
     if config['USE_CHAR_MODEL'] is None:
         sub_ds_loader,features = make_test_loader(config, tokenizer, df=df)
     else:
@@ -333,8 +333,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
                                            end_logits.tolist(), return_nbest=True, use_char_model=config['USE_CHAR_MODEL'])
 
     df['PredictionString'] = df['id'].map(preds)
-    logging.info(f"dump assignment: {start_logits.shape}")
-    logging.info(f"dump assignment: {start_logits.tolist()}")
+    #logging.info(f"dump assignment: {start_logits.shape}")
+    #logging.info(f"dump assignment: {start_logits.tolist()}")
     df['start_logits'] = start_logits.tolist()
     df['end_logits'] = end_logits.tolist()
 
