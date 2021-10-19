@@ -388,8 +388,8 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False,
 
             # debug output:
             debug_dump_ids = ['5f3e08e8e', 'f5947cc1f', '989287230', 'b6a100479']
-            logging.info(f"debug dump: {[(r['id'], r['PredictionString'], r['input_ids']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
-            logging.info(f"debug dump, s,e: {[(r['id'], r['start_logits'], r['end_logits']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
+            #logging.info(f"debug dump: {[(r['id'], r['PredictionString'], r['input_ids']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
+            #logging.info(f"debug dump, s,e: {[(r['id'], r['start_logits'], r['end_logits']) for i,r in res_df.iterrows() if r['id'] in debug_dump_ids]}")
 
             if dump_pred:
                 import pickle
@@ -403,13 +403,13 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False,
 
             logging.info(f"loss on training: {jaccard_metric}")
 
-        res_df = pred_df(test, pretrain_base_path, nbest)
+        res_df = pred_df(test, pretrain_base_path, nbest, data_input_path=data_input_path)
 
         pred = res_df[['id', 'PredictionString']]
         logging.info(pred.head())
     else:
         # test infer on training set when it's training mode...
-        res_df = pred_df(train, pretrain_base_path)
+        res_df = pred_df(train, pretrain_base_path, data_input_path=data_input_path)
         res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
         jaccard_metric = res_df['jaccard'].mean()
