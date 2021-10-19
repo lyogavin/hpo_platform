@@ -250,7 +250,10 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     # fix GPT2 save pretrain issue...
     logging.info(f"loading tokenizer for {config['TOKENIZER']}")
     logging.info(f"loading from {pretrain_paths[0]}/tokenizer/")
-    tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
+
+    tokenizer = None
+    if config['USE_CHAR_MODEL'] is None:
+        tokenizer = AutoTokenizer.from_pretrained(f"{str(pretrain_paths[0])}/tokenizer/")
 
     #logging.info(f"shape of df: {df.shape}")
     if config['USE_CHAR_MODEL'] is None:
