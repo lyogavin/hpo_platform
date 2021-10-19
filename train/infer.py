@@ -531,8 +531,8 @@ def char_model_infer_and_gen_submission(saving_ts,
 
     if test_df_path is None:
         test_df_path = infer_and_save_inter_outputs(saving_ts,
-                                     "/content/drive/MyDrive/chaii/input/",
-                                     "/content/drive/MyDrive/chaii/output/",
+                                     input_path,
+                                     output_path,
                                      use_train=False,
                                      test_mode=False)
     test = pd.read_pickle(test_df_path)
