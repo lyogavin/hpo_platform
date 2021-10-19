@@ -441,12 +441,13 @@ def download_saving(url, saving_ts):
     os.remove(downloaded_file)
 
 
-def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, use_train=True, output_logits=True, test_mode=False,
+def infer_and_save_inter_outputs(saving_ts, input_base_path, output_base_path, token_model_save_path,
+                                 use_train=True, output_logits=True, test_mode=False,
                                  char_model=False):
     train, test = get_train_and_test_df(input_base_path)
     str_train = 'train' if use_train else 'test'
 
-    pretrain_base_path = f"{output_base_path}/pretrained-{saving_ts}"
+    pretrain_base_path = f"{token_model_save_path}/pretrained-{saving_ts}"
 
     current_ts = int(time.time())
 
@@ -515,6 +516,8 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         char_model_saving_ts,
                                         input_path,
                                         output_path,
+                                        token_model_save_path,
+                                        char_model_save_path,
                                         train_df_path=None,
                                         test_df_path=None,
                                         TRAIN_MODE=False,
@@ -533,6 +536,7 @@ def char_model_infer_and_gen_submission(saving_ts,
         test_df_path = infer_and_save_inter_outputs(saving_ts,
                                      input_path,
                                      output_path,
+                                     token_model_save_path,
                                      use_train=False,
                                      test_mode=False)
     test = pd.read_pickle(test_df_path)
@@ -547,7 +551,7 @@ def char_model_infer_and_gen_submission(saving_ts,
 
         train = train[train.id.isin(data.loc[split_output[0][0]]['id'].values)].reset_index(drop=True)
 
-    pretrain_base_path = f"{output_path}/pretrained-{char_model_saving_ts}"
+    pretrain_base_path = f"{char_model_save_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,
                    filter_ids=filter_ids,dump_pred=dump_pred)
 
