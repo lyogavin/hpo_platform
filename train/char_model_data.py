@@ -173,6 +173,7 @@ class CharDataset(Dataset):
 
             logging.info(f"using max len context as maxlen: {max_len}")
 
+        self.original_lens = [len(x) for x in self.X]
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
@@ -208,6 +209,7 @@ class CharDataset(Dataset):
             # 'features_index':item
             'start_probas': torch.tensor(self.start_probas[idx]).float(),
             'end_probas': torch.tensor(self.end_probas[idx]).float(),
+            'original_len': self.original_lens[idx]
         }
         if 'start_position' in self.df.columns:
             to_ret['start_position'] = torch.tensor(self.df.iloc[idx]['start_position'], dtype=torch.long)
@@ -274,6 +276,22 @@ def char_model_make_loader(
     logging.info(f"loaders created, num steps: train-{len(train_dataloader)}, val-{len(valid_dataloader)}")
     return train_dataloader, valid_dataloader, train_set, valid_set, len_voc
 
+
+def collate_fn(batch):
+    """
+    batch = [dataset[i] for i in N]
+    """
+
+    max_len = max([x['original_len'] for x in batch])
+
+    to_ret = []
+    for x in batch:
+        x['input_ids'] = x['input_ids'][:max_len]
+        x['start_probas'] = x['start_probas'][:max_len]
+        x['end_probas'] = x['end_probas'][:max_len]
+
+    return batch
+
 def char_model_make_test_loader(
         config,
         tokenizer,
@@ -304,7 +322,8 @@ def char_model_make_test_loader(
         sampler=valid_sampler,
         num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
-        drop_last=False
+        drop_last=False,
+        collate_fn=collate_fn
     )
     test['input_ids'] = X_test
     return valid_dataloader, test.to_dict('records'), len_voc
