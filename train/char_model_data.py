@@ -283,14 +283,12 @@ def collate_fn(batch):
     """
 
     max_len = max([x['original_len'] for x in batch])
-
-    to_ret = []
-    for x in batch:
-        x['input_ids'] = torch.tensor(x['input_ids'][:max_len], dtype=torch.long)
-        x['start_probas'] = torch.tensor(x['start_probas'][:max_len]).float()
-        x['end_probas'] = torch.tensor(x['end_probas'][:max_len]).float()
-
-    return batch
+    elem = batch[0]
+    to_ret = {key: [d[key] for d in batch] for key in elem}
+    to_ret['input_ids'] = to_ret['input_ids'][:max_len]
+    to_ret['start_probas'] = to_ret['start_probas'][:max_len]
+    to_ret['end_probas'] = to_ret['end_probas'][:max_len]
+    return to_ret
 
 def char_model_make_test_loader(
         config,
@@ -323,7 +321,6 @@ def char_model_make_test_loader(
         num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
         drop_last=False,
-        collate_fn=collate_fn
     )
     test['input_ids'] = X_test
     return valid_dataloader, test.to_dict('records'), len_voc

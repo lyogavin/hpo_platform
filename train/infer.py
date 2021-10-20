@@ -160,6 +160,8 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
                 model_input_keys = ['input_ids', 'attention_mask']
             else:
                 model_input_keys = ['input_ids', 'start_probas', 'end_probas']
+
+
             data = {key: val.reshape(val.shape[0], -1).to(device) for key, val in d.items() if key in model_input_keys}
 
 
