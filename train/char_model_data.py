@@ -286,9 +286,9 @@ def collate_fn(batch):
 
     to_ret = []
     for x in batch:
-        x['input_ids'] = x['input_ids'][:max_len]
-        x['start_probas'] = x['start_probas'][:max_len]
-        x['end_probas'] = x['end_probas'][:max_len]
+        x['input_ids'] = torch.tensor(x['input_ids'][:max_len], dtype=torch.long)
+        x['start_probas'] = torch.tensor(x['start_probas'][:max_len]).float()
+        x['end_probas'] = torch.tensor(x['end_probas'][:max_len]).float()
 
     return batch
 
