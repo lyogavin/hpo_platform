@@ -173,7 +173,7 @@ class CharDataset(Dataset):
 
             logging.info(f"using max len context as maxlen: {max_len}")
 
-        self.original_lens = [len(x) for x in self.X]
+        self.original_lens = [len(x) for x in X]
 
         self.X = pad_sequences(X, maxlen=max_len, padding='post', truncating='post')
 
