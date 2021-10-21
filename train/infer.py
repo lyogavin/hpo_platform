@@ -342,7 +342,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
 
     logging.info(f"infer output: {np.array(start_logits).shape}")
     start_logits = np.array(start_logits)
-    start_logits = np.array(end_logits)
+    end_logits = np.array(end_logits)
 
     start_logits = start_logits/(len(pretrain_paths))
     end_logits = end_logits/(len(pretrain_paths))
