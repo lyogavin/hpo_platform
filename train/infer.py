@@ -205,8 +205,8 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
             else:
                 outputs_ends = np.concatenate((outputs_ends, outputs_end), axis=0)
             '''
-    outputs_starts = pad_sequences(outputs_starts, dtype='float',padding='post')
-    outputs_ends = pad_sequences(outputs_ends, dtype='float',padding='post')
+    #outputs_starts = pad_sequences(outputs_starts, dtype='float',padding='post')
+    #outputs_ends = pad_sequences(outputs_ends, dtype='float',padding='post')
 
     return outputs_starts, outputs_ends
 
@@ -317,11 +317,17 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         if start_logits is None:
             start_logits = pred_start
         else:
-            start_logits += pred_start
+            for ib in range(len(start_logits)):
+                for iseq in range(len(start_logits[ib])):
+                    start_logits[ib][iseq] += pred_start[ib][iseq]
+            #start_logits += pred_start
         if end_logits is None:
             end_logits = pred_end
         else:
-            end_logits += pred_end
+            #end_logits += pred_end
+            for ib in range(len(pred_end)):
+                for iseq in range(len(pred_end[ib])):
+                    end_logits[ib][iseq] += pred_end[ib][iseq]
         
         
         # cleanup after fold is done
