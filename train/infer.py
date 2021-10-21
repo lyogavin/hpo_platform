@@ -191,6 +191,10 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
             for x in outputs_end:
                 outputs_ends.append(x)
 
+            del outputs_start
+            del outputs_end
+            gc.collect()
+
             '''
             if outputs_starts is None:
                 outputs_starts = outputs_start
