@@ -191,7 +191,7 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
             for x in outputs_end:
                 outputs_ends.append(x)
 
-
+            '''
             if outputs_starts is None:
                 outputs_starts = outputs_start
             else:
@@ -200,7 +200,7 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
                 outputs_ends = outputs_end
             else:
                 outputs_ends = np.concatenate((outputs_ends, outputs_end), axis=0)
-
+            '''
     outputs_starts = pad_sequences(outputs_starts, dtype='float',padding='post')
     outputs_ends = pad_sequences(outputs_ends, dtype='float',padding='post')
 
