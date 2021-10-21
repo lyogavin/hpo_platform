@@ -152,9 +152,10 @@ class DatasetRetriever(Dataset):
 
 
 class CharDataset(Dataset):
-    def __init__(self, df, X, n_models=1, max_len=1500, train=True):
+    def __init__(self, df, X, n_models=1, max_len=1500, train=True, no_tensor=False):
         self.max_len = max_len
         self.df = df.copy()
+        self.no_tensor = no_tensor
         #start_probas, end_probas
 
         if 'start_position' in self.df.columns:
@@ -199,7 +200,7 @@ class CharDataset(Dataset):
     def __getitem__(self, idx):
         to_ret = {}
         to_ret = {
-            'input_ids': torch.tensor(self.X[idx], dtype=torch.long),
+            'input_ids': self.X[idx] if self.no_tensor else torch.tensor(self.X[idx], dtype=torch.long),
             #'attention_mask': torch.tensor(feature['attention_mask'], dtype=torch.long),
             #'offset_mapping': torch.tensor(feature['offset_mapping'], dtype=torch.long),
             #'sequence_ids': torch.tensor(feature['sequence_ids'], dtype=torch.long),
@@ -207,13 +208,13 @@ class CharDataset(Dataset):
             'context': self.df.iloc[idx]['context'],
             'question': self.df.iloc[idx]['question'],
             # 'features_index':item
-            'start_probas': torch.tensor(self.start_probas[idx]).float(),
-            'end_probas': torch.tensor(self.end_probas[idx]).float(),
+            'start_probas': self.start_probas[idx] if self.no_tensor else  torch.tensor(self.start_probas[idx]).float(),
+            'end_probas': self.end_probas[idx] if self.no_tensor else  torch.tensor(self.end_probas[idx]).float(),
             'original_len': self.original_lens[idx]
         }
         if 'start_position' in self.df.columns:
-            to_ret['start_position'] = torch.tensor(self.df.iloc[idx]['start_position'], dtype=torch.long)
-            to_ret['end_position'] = torch.tensor(self.df.iloc[idx]['end_position'], dtype=torch.long)
+            to_ret['start_position'] =self.df.iloc[idx]['start_position'] if self.no_tensor else  torch.tensor(self.df.iloc[idx]['start_position'], dtype=torch.long)
+            to_ret['end_position'] =self.df.iloc[idx]['end_position'] if self.no_tensor else  torch.tensor(self.df.iloc[idx]['end_position'], dtype=torch.long)
             to_ret['answer_text'] = self.df.iloc[idx]['answer_text']
 
         return to_ret
@@ -285,6 +286,9 @@ def collate_fn(batch):
     max_len = max([x['original_len'] for x in batch])
     elem = batch[0]
     to_ret = {key: [d[key] for d in batch] for key in elem}
+    to_ret['start_position'] = torch.tensor(to_ret['start_position'] , dtype=torch.long)
+    to_ret['end_position'] = torch.tensor(to_ret['end_position'] , dtype=torch.long)
+    
     to_ret['input_ids'] = torch.tensor([x[:max_len] for x in to_ret['input_ids']], dtype=torch.long)
     to_ret['start_probas'] = torch.tensor([x[:max_len] for x in to_ret['start_probas']], dtype=torch.float)
     to_ret['end_probas'] = torch.tensor([x[:max_len] for x in to_ret['end_probas']], dtype=torch.float)
@@ -313,7 +317,7 @@ def char_model_make_test_loader(
     X_test = tokenizer.texts_to_sequences(test['context'].values)
 
     valid_sampler = SequentialSampler(test)
-    valid_dataset = CharDataset(test, X_test)
+    valid_dataset = CharDataset(test, X_test,no_tensor=True)
     valid_dataloader = DataLoader(
         valid_dataset,
         batch_size=config['VALID_BATCH_SIZE'],
