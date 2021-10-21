@@ -327,6 +327,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         # cleanup after fold is done
         logging.info(f'cleanup after model is done')
         del model
+        del pred_end
+        del pred_start
         gc.collect()
         torch.cuda.empty_cache()
 
