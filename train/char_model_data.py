@@ -321,6 +321,7 @@ def char_model_make_test_loader(
         num_workers=optimal_num_of_loader_workers(config),
         pin_memory=True,
         drop_last=False,
+        collate_fn=collate_fn
     )
     test['input_ids'] = X_test
     return valid_dataloader, test.to_dict('records'), len_voc
