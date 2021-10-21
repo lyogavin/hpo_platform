@@ -285,9 +285,9 @@ def collate_fn(batch):
     max_len = max([x['original_len'] for x in batch])
     elem = batch[0]
     to_ret = {key: [d[key] for d in batch] for key in elem}
-    to_ret['input_ids'] = [x[:max_len] for x in to_ret['input_ids']]
-    to_ret['start_probas'] = [x[:max_len] for x in to_ret['start_probas']]
-    to_ret['end_probas'] = [x[:max_len] for x in to_ret['end_probas']]
+    to_ret['input_ids'] = torch.tensor([x[:max_len] for x in to_ret['input_ids']], dtype=torch.long)
+    to_ret['start_probas'] = torch.tensor([x[:max_len] for x in to_ret['start_probas']], dtype=torch.float)
+    to_ret['end_probas'] = torch.tensor([x[:max_len] for x in to_ret['end_probas']], dtype=torch.float)
     return to_ret
 
 def char_model_make_test_loader(
