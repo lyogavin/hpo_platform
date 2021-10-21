@@ -135,6 +135,7 @@ from transformers import (
 )
 import os
 
+from keras.preprocessing.sequence import pad_sequences
 from pathlib import Path
 import distutils
 
@@ -147,8 +148,8 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
     model.eval()
     to_ret = {}
     with torch.no_grad():
-        outputs_starts = None
-        outputs_ends = None
+        outputs_starts = []
+        outputs_ends = []
 
         to_for = enumerate(data_loader)
         if use_tqdm:
@@ -182,8 +183,14 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
             outputs_end = outputs_end.squeeze(-1)
 
             
-            outputs_start = outputs_start.detach().cpu().numpy()
-            outputs_end = outputs_end.detach().cpu().numpy()
+            outputs_start = outputs_start.detach().cpu().tolist()
+            outputs_end = outputs_end.detach().cpu().tolist()
+
+            for x in outputs_start:
+                outputs_starts.append(x)
+            for x in outputs_end:
+                outputs_ends.append(x)
+
 
             if outputs_starts is None:
                 outputs_starts = outputs_start
@@ -194,6 +201,8 @@ def infer(data_loader, model, device, config, tokenizer, use_tqdm=True):
             else:
                 outputs_ends = np.concatenate((outputs_ends, outputs_end), axis=0)
 
+    outputs_starts = pad_sequences(outputs_starts, dtype='float',padding='post')
+    outputs_ends = pad_sequences(outputs_ends, dtype='float',padding='post')
 
     return outputs_starts, outputs_ends
 
