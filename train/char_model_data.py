@@ -286,9 +286,10 @@ def collate_fn(batch):
     max_len = max([x['original_len'] for x in batch])
     elem = batch[0]
     to_ret = {key: [d[key] for d in batch] for key in elem}
-    to_ret['start_position'] = torch.tensor(to_ret['start_position'] , dtype=torch.long)
-    to_ret['end_position'] = torch.tensor(to_ret['end_position'] , dtype=torch.long)
-    
+    if 'start_position' in to_ret:
+        to_ret['start_position'] = torch.tensor(to_ret['start_position'] , dtype=torch.long)
+        to_ret['end_position'] = torch.tensor(to_ret['end_position'] , dtype=torch.long)
+
     to_ret['input_ids'] = torch.tensor([x[:max_len] for x in to_ret['input_ids']], dtype=torch.long)
     to_ret['start_probas'] = torch.tensor([x[:max_len] for x in to_ret['start_probas']], dtype=torch.float)
     to_ret['end_probas'] = torch.tensor([x[:max_len] for x in to_ret['end_probas']], dtype=torch.float)
