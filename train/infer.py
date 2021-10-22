@@ -370,7 +370,7 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     df['PredictionString'] = df['id'].map(preds)
     #logging.info(f"dump assignment: {start_logits.shape}")
     #logging.info(f"dump assignment: {start_logits.tolist()}")
-    if len(df) == start_logits.shape[0]:
+    if len(df) == len(start_logits):
         df['start_logits'] = start_logits
         df['end_logits'] = end_logits
 
