@@ -341,31 +341,38 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
         
 
     logging.info(f"infer output: {np.array(start_logits).shape}")
-    start_logits = np.array(start_logits)
-    end_logits = np.array(end_logits)
+    #start_logits = np.array(start_logits)
+    #end_logits = np.array(end_logits)
 
-    start_logits = start_logits/(len(pretrain_paths))
-    end_logits = end_logits/(len(pretrain_paths))
+    # = start_logits/(len(pretrain_paths))
+    #end_logits = end_logits/(len(pretrain_paths))
 
-    ret_start_logits = start_logits.tolist().copy()
-    ret_end_logits = end_logits.tolist().copy()
+    for ib in range(len(start_logits)):
+        for iseq in range(len(start_logits[ib])):
+            start_logits[ib][iseq] /= len(pretrain_paths)
+    for ib in range(len(end_logits)):
+        for iseq in range(len(end_logits[ib])):
+            end_logits[ib][iseq] /= len(pretrain_paths)
+
+    ret_start_logits = start_logits #.tolist().copy()
+    ret_end_logits = end_logits #.tolist().copy()
 
 
     if not nbest:
         preds = postprocess_qa_predictions(tokenizer, features,
-                                           start_logits.tolist(),
-                                           end_logits.tolist(), use_char_model=config['USE_CHAR_MODEL'])
+                                           start_logits,
+                                           end_logits, use_char_model=config['USE_CHAR_MODEL'])
     else:
         preds, preds_nbest = postprocess_qa_predictions(tokenizer, features,
-                                           start_logits.tolist(),
-                                           end_logits.tolist(), return_nbest=True, use_char_model=config['USE_CHAR_MODEL'])
+                                           start_logits,
+                                           end_logits, return_nbest=True, use_char_model=config['USE_CHAR_MODEL'])
 
     df['PredictionString'] = df['id'].map(preds)
     #logging.info(f"dump assignment: {start_logits.shape}")
     #logging.info(f"dump assignment: {start_logits.tolist()}")
     if len(df) == start_logits.shape[0]:
-        df['start_logits'] = start_logits.tolist()
-        df['end_logits'] = end_logits.tolist()
+        df['start_logits'] = start_logits
+        df['end_logits'] = end_logits
 
 
     if not nbest:
