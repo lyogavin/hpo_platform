@@ -227,7 +227,8 @@ from pathlib import Path
 
 
     
-def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=False, data_input_path=None):
+def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=False, data_input_path=None,single_fold=False,
+            infer_batch=None):
     # get config from pretrain path first...
     pretrain_paths = []
 
@@ -248,6 +249,8 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
     else:
         config = TrainingConfig(json.load(open(f'{pretrain_paths[0]}/training_config.json')))
 
+    if infer_batch is not None:
+        config['VALID_BATCH_SIZE'] = infer_batch
     
     if 'SEED' in config:
         seed_everything(config['SEED'])
@@ -283,6 +286,9 @@ def pred_df(df, pretrain_base_path, nbest=False, return_logits=False, test_mode=
 
     if test_mode:
         pretrain_paths = [pretrain_paths[0]]
+
+    if single_fold:
+        pretrain_paths = pretrain_paths[:1]
 
     for p in pretrain_paths:
         model_class = getattr(model_import, config['MODEL_CLASS'])
@@ -406,7 +412,7 @@ def create_submission(_,predictions, calibrate_rms=None):
 
 def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False,
                    TEST_ON_TRAINING=True, gen_file=True, nbest=False,
-                   filter_ids=None,dump_pred=False,data_input_path=None):
+                   filter_ids=None,dump_pred=False,data_input_path=None, single_fold=False,infer_batch=None):
     to_ret = None
     if not TRAIN_MODE:
         if TEST_ON_TRAINING:
@@ -415,7 +421,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False,
             if filter_ids is not None:
                 logging.info(f"filtering ids:{filter_ids}")
                 train = train[train.id.isin(filter_ids)].reset_index(drop=True)
-            res_df = pred_df(train, pretrain_base_path, data_input_path=data_input_path)
+            res_df = pred_df(train, pretrain_base_path, data_input_path=data_input_path, single_fold=single_fold,infer_batch=infer_batch)
             res_df['jaccard'] = res_df.apply(lambda x: jaccard(x['answer_text'], x['PredictionString']), axis=1)
 
             # debug output:
@@ -435,7 +441,7 @@ def gen_submission(pretrain_base_path, train, test, TRAIN_MODE=False,
 
             logging.info(f"loss on training: {jaccard_metric}")
 
-        res_df = pred_df(test, pretrain_base_path, nbest, data_input_path=data_input_path)
+        res_df = pred_df(test, pretrain_base_path, nbest, data_input_path=data_input_path, single_fold=single_fold,infer_batch=infer_batch)
 
         pred = res_df[['id', 'PredictionString']]
         logging.info(pred.head())
@@ -567,7 +573,9 @@ def char_model_infer_and_gen_submission(saving_ts,
                                         gen_file=True,
                                         filter_ids=None,
                                         dump_pred=False,
-                                        test_split_config=None):
+                                        test_split_config=None,
+                                        single_fold=False,
+                                        infer_batch=None):
 
     train0, test0 = get_train_and_test_df(root_path=input_path)
     train = pd.read_pickle(train_df_path)
@@ -595,7 +603,7 @@ def char_model_infer_and_gen_submission(saving_ts,
 
     pretrain_base_path = f"{char_model_save_path}/pretrained-{char_model_saving_ts}"
     gen_submission(pretrain_base_path, train, test, TRAIN_MODE, TEST_ON_TRAINING, gen_file,
-                   filter_ids=filter_ids,dump_pred=dump_pred, data_input_path=input_path)
+                   filter_ids=filter_ids,dump_pred=dump_pred, data_input_path=input_path, single_fold=single_fold,infer_batch=infer_batch)
 
 # In[ ]:
 
